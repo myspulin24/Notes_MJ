@@ -184,6 +184,8 @@ interface State {
 
   /** `manual` is the button; the startup check passes false and stays quiet. */
   checkForUpdates: (manual: boolean) => Promise<void>;
+  /** Fetches the update found by the last check, whatever the auto setting says. */
+  downloadUpdateNow: () => Promise<void>;
   installUpdate: () => Promise<void>;
   dismissUpdate: () => void;
 
@@ -776,12 +778,23 @@ export const useStore = create<State>((set, get) => ({
 
     if (!(get().settings?.updates_auto_download ?? true)) {
       if (manual) {
-        get().toast('info', `K dispozici je verze ${result.info.version}. Stažení spustíte v nastavení.`);
+        get().toast(
+          'info',
+          `K dispozici je verze ${result.info.version}. Stažení spustíte tlačítkem.`,
+        );
       }
       return;
     }
 
-    set({ updateStage: 'downloading', updateProgress: NO_PROGRESS });
+    await get().downloadUpdateNow();
+  },
+
+  downloadUpdateNow: async () => {
+    const { updateStage, updateInfo } = get();
+    // Only sensible right after a check found something, or after a failure.
+    if (updateStage !== 'available' && updateStage !== 'error') return;
+
+    set({ updateStage: 'downloading', updateProgress: NO_PROGRESS, updateError: null });
     const downloaded = await downloadUpdate((progress) => set({ updateProgress: progress }));
 
     if (!downloaded.ok) {
@@ -798,7 +811,7 @@ export const useStore = create<State>((set, get) => ({
     set({ updateStage: 'ready', updateBannerHidden: false });
     void get().notify(
       'app.update_ready',
-      `Verze ${result.info.version} je připravená`,
+      updateInfo ? `Verze ${updateInfo.version} je připravená` : 'Aktualizace je připravená',
       'Dokončí se restartem aplikace.',
     );
   },

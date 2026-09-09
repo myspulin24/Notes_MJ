@@ -153,11 +153,13 @@ export async function currentVersion(): Promise<string> {
 export async function checkForUpdate(): Promise<CheckResult> {
   if (!isDesktop()) return { kind: 'unsupported' };
 
+  // Whatever was staged before is about to be superseded.
+  await discardUpdate();
+
   try {
     const { check } = await import('@tauri-apps/plugin-updater');
     const update = await check();
     if (!update) {
-      pending = null;
       return { kind: 'current' };
     }
     pending = update as unknown as UpdateHandle;
@@ -173,6 +175,11 @@ export async function checkForUpdate(): Promise<CheckResult> {
     pending = null;
     return { kind: 'error', error: toAppError(error) };
   }
+}
+
+/** Whether a checked-for update is staged and installable. */
+export function hasPendingUpdate(): boolean {
+  return pending !== null;
 }
 
 /**

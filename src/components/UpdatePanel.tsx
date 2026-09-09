@@ -22,6 +22,7 @@ export function UpdatePanel() {
     updateCheckedAt,
     settings,
     checkForUpdates,
+    downloadUpdateNow,
     installUpdate,
   } = useStore();
 
@@ -33,7 +34,7 @@ export function UpdatePanel() {
         <div>
           <h3>Verze aplikace</h3>
           <p className="muted small">
-            Notes_MJ {appVersion || '1.1.0'}
+            Notes_MJ {appVersion || '—'}
             {updateCheckedAt ? ` · naposledy zkontrolováno ${clockOf(updateCheckedAt)}` : ''}
           </p>
         </div>
@@ -62,7 +63,7 @@ export function UpdatePanel() {
         progress={updateProgress}
         error={updateError}
         autoDownload={settings?.updates_auto_download ?? true}
-        onDownload={() => void checkForUpdates(true)}
+        onDownload={() => void downloadUpdateNow()}
       />
 
       {updateInfo?.notes && (updateStage === 'ready' || updateStage === 'available') ? (
