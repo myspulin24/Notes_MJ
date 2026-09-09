@@ -1,0 +1,76 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Notes_MJ",
+  "version": "1.1.0",
+  "identifier": "cz.michaljasek.notesmj",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5183",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Notes_MJ",
+        "width": 1180,
+        "height": 780,
+        "minWidth": 720,
+        "minHeight": 520,
+        "resizable": true,
+        "center": true,
+        "decorations": true,
+        "theme": null
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'",
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPDATA/**",
+          "$HOME/.notes_mj/userdata/**",
+          "$HOME/.t3/userdata/**"
+        ]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "msi",
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "shortDescription": "Local-first personal task manager",
+    "longDescription": "Notes_MJ keeps every task, note, project and attachment in a local SQLite database on this PC. No account, no server, no telemetry.",
+    "publisher": "Michal Jašek",
+    "copyright": "© 2026 Michal Jašek",
+    "category": "Productivity",
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhEQUQxRTlEMjQ1NDQyNTcKUldSWFFsUWtuUjZ0amN5UUN3eFZlN3QvYU8wTlpWT3VGYUQwNUhFSW5CM1BEMS9ObGRrSVBEWmYK",
+      "endpoints": [
+        "https://github.com/myspulin24/Notes_MJ/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

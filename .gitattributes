@@ -1,0 +1,5 @@
+# Keep the repository in LF; Windows checkouts still get CRLF locally.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary

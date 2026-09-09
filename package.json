@@ -1,0 +1,44 @@
+{
+  "name": "notes_mj",
+  "private": true,
+  "version": "1.1.0",
+  "description": "Notes_MJ - a local-first personal planner in the spirit of Things 3.",
+  "author": "Michal Jašek",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "first-run": "node scripts/bootstrap.mjs",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "app": "tauri dev",
+    "app:build": "tauri build",
+    "test": "npm run test:ts && npm run test:rs",
+    "test:ts": "vitest run",
+    "test:rs": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "typecheck": "tsc --noEmit",
+    "tauri": "tauri",
+    "version:set": "node scripts/set-version.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.9.0",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.3",
+    "@tauri-apps/plugin-dialog": "^2.4.0",
+    "@tauri-apps/plugin-notification": "^2.3.1",
+    "@tauri-apps/plugin-opener": "^2.5.5",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.11.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^5.7.2",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0"
+  }
+}

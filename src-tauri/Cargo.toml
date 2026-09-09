@@ -1,0 +1,49 @@
+[package]
+name = "notes-mj"
+version = "1.1.0"
+description = "Notes_MJ - a local-first personal task and note manager"
+authors = ["Michal Jašek"]
+edition = "2021"
+rust-version = "1.77"
+default-run = "notes_mj"
+
+[lib]
+name = "notes_mj_lib"
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[[bin]]
+name = "notes_mj"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset", "tray-icon"] }
+tauri-plugin-notification = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled", "backup"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+dotenvy = "0.15"
+thiserror = "1"
+dirs = "5"
+tauri-plugin-clipboard-manager = "2.1.0-beta.7"
+
+# Updating is desktop-only; on any other target these simply are not compiled.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+src-tauri/target/
+src-tauri/gen/
+
+# secrets & local config — never commit
+.env
+.env.local
+.env.*.local
+
+# local user data (also lives outside the repo by default)
+.t3/
+*.db
+*.db-wal
+*.db-shm
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

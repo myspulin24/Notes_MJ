@@ -1,0 +1,33 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capabilities for the single Notes_MJ window. Deliberately minimal: no HTTP, no shell execution, no filesystem plugin. All disk access happens in Rust behind audited commands. The updater is the only outbound network access, and it verifies a signature before installing anything.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-title",
+    "core:webview:allow-internal-toggle-devtools",
+    "core:app:allow-version",
+    "updater:default",
+    "process:allow-restart",
+    "notification:default",
+    "notification:allow-is-permission-granted",
+    "notification:allow-request-permission",
+    "notification:allow-notify",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-message",
+    "dialog:allow-confirm",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text",
+    "opener:allow-reveal-item-in-dir",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        { "path": "$HOME/.notes_mj/userdata/**" },
+        { "path": "$HOME/.t3/userdata/**" }
+      ]
+    }
+  ]
+}

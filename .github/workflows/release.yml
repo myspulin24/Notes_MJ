@@ -1,0 +1,72 @@
+# Builds, signs and publishes a Windows release.
+#
+# Triggered by pushing a version tag:
+#
+#     npm version 1.1.1 --no-git-tag-version   (bumps package.json)
+#     # bump src-tauri/Cargo.toml and src-tauri/tauri.conf.json to match
+#     git commit -am "1.1.1" && git tag v1.1.1 && git push --follow-tags
+#
+# tauri-action does the bundling and also writes `latest.json`, which is the
+# file the installed app polls. The three must agree - the version in the tag,
+# in tauri.conf.json and in latest.json - or the app will either not see the
+# update or refuse it.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  # Lets a failed release be re-run without moving the tag around.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build, e.g. v1.1.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Rust builds are slow and almost entirely cacheable.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # A release that fails its own tests is not a release. This is the same
+      # command used locally, so there is one definition of "passing".
+      - run: npm test
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          releaseName: 'Notes_MJ __VERSION__'
+          releaseBody: |
+            Instalace: stáhněte `Notes_MJ___VERSION___x64-setup.exe` a spusťte.
+
+            Kdo už Notes_MJ nainstalované má, nemusí dělat nic — aplikace si
+            novou verzi najde sama a nabídne restart.
+          releaseDraft: false
+          prerelease: false
+          # This is what makes automatic updates work: it publishes latest.json
+          # alongside the installer, with the signature the app checks.
+          includeUpdaterJson: true
