@@ -92,6 +92,15 @@ impl Store {
 
     fn migrate(&mut self) -> Result<()> {
         let version: i64 = self.conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+
+        // An existing database about to be changed gets copied aside first, and
+        // a failure here stops the migration rather than being shrugged off:
+        // refusing to open is recoverable, a half-applied schema with no copy
+        // to go back to is not. Version 0 is a database that does not exist yet.
+        if version > 0 && version < SCHEMA_VERSION {
+            self.snapshot_before_migration(version)?;
+        }
+
         if version < 1 {
             self.conn.execute_batch(SCHEMA_V1)?;
         }

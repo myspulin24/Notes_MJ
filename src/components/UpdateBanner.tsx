@@ -11,9 +11,10 @@ import { useStore } from '../state/store';
 import { CloseIcon, RefreshIcon } from './Icons';
 
 export function UpdateBanner() {
-  const { updateStage, updateInfo, installUpdate, dismissUpdate } = useStore();
+  const { updateStage, updateInfo, updateBannerHidden, installUpdate, dismissUpdate } =
+    useStore();
 
-  if (updateStage !== 'ready') return null;
+  if (updateStage !== 'ready' || updateBannerHidden) return null;
 
   return (
     <div className="update-banner" role="status">

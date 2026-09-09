@@ -30,14 +30,23 @@ export type CheckResult =
   | { kind: 'unsupported' }
   | { kind: 'error'; error: AppError };
 
-/** The handle the plugin hands back; kept opaque so this module owns the type. */
+/**
+ * The handle the plugin hands back; kept opaque so this module owns the type.
+ *
+ * `download` and `install` are deliberately kept apart. The plugin also offers
+ * `downloadAndInstall`, but on Windows that *exits the application* as soon as
+ * the bytes have arrived - which, for a download started quietly in the
+ * background, would mean the window vanishing mid-sentence. Downloading stages
+ * the installer and changes nothing; only `install` acts, and only when the
+ * user presses Restart.
+ */
 type UpdateHandle = {
   version: string;
   body?: string | null;
   date?: string | null;
-  downloadAndInstall: (
-    onEvent: (event: DownloadEvent) => void,
-  ) => Promise<void>;
+  download: (onEvent: (event: DownloadEvent) => void) => Promise<void>;
+  install: () => Promise<void>;
+  close: () => Promise<void>;
 };
 
 export type DownloadEvent =
@@ -167,11 +176,11 @@ export async function checkForUpdate(): Promise<CheckResult> {
 }
 
 /**
- * Downloads the update and stages the installer.
+ * Fetches the update and leaves it staged.
  *
- * Despite the plugin's name this does not restart anything on Windows - the
- * installer is fetched, verified and left ready. Nothing runs until
- * `relaunch()` is called, which is what lets the user finish the sentence.
+ * The signature is checked here, as part of the download, so reaching the end
+ * of this function without an error means the bytes are both complete and
+ * genuinely ours. Nothing is executed.
  */
 export async function downloadUpdate(
   onProgress: (progress: DownloadProgress) => void,
@@ -189,7 +198,7 @@ export async function downloadUpdate(
 
   let progress = NO_PROGRESS;
   try {
-    await pending.downloadAndInstall((event) => {
+    await pending.download((event) => {
       progress = applyDownloadEvent(progress, event);
       onProgress(progress);
     });
@@ -200,23 +209,33 @@ export async function downloadUpdate(
 }
 
 /**
- * Closes the app and lets the staged installer take over.
+ * Runs the staged installer, which closes the app and reopens the new version.
  *
- * Everything is already committed to SQLite by this point - each command runs
- * in its own transaction - so there is nothing to flush first.
+ * On Windows `install` hands over to the NSIS installer and exits this process,
+ * so anything written after the await will not run. That is fine: every command
+ * commits its own SQLite transaction as it goes, so there is nothing waiting to
+ * be flushed. It only returns at all when the handover failed.
  */
-export async function relaunchApp(): Promise<AppError | null> {
-  if (!isDesktop()) return null;
+export async function installUpdate(): Promise<AppError | null> {
+  if (!pending) {
+    return {
+      kind: 'unavailable',
+      message: 'Není co instalovat - aktualizace se nestáhla.',
+      retryable: true,
+    };
+  }
   try {
-    const { relaunch } = await import('@tauri-apps/plugin-process');
-    await relaunch();
+    await pending.install();
     return null;
   } catch (error) {
     return toAppError(error);
   }
 }
 
-/** Test seam: forget any staged update. */
-export function resetPending(): void {
+/** Lets go of a staged update and the resources the plugin holds for it. */
+export async function discardUpdate(): Promise<void> {
+  const held = pending;
   pending = null;
+  // Best effort: a handle we could not close is not worth a message.
+  await held?.close().catch(() => {});
 }

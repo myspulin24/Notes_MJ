@@ -16,7 +16,7 @@ import {
   checkForUpdate,
   currentVersion,
   downloadUpdate,
-  relaunchApp,
+  installUpdate as runInstaller,
   NO_PROGRESS,
 } from '../lib/updater';
 import type { DownloadProgress, UpdateInfo } from '../lib/updater';
@@ -139,6 +139,8 @@ interface State {
   updateError: AppError | null;
   /** When the last check finished, so the panel can say "naposledy v ...". */
   updateCheckedAt: string | null;
+  /** The banner was closed. The update itself stays staged and installable. */
+  updateBannerHidden: boolean;
 
   // -- actions
   init: () => Promise<void>;
@@ -243,6 +245,7 @@ export const useStore = create<State>((set, get) => ({
   updateProgress: NO_PROGRESS,
   updateError: null,
   updateCheckedAt: null,
+  updateBannerHidden: false,
   plannerVersion: 0,
 
   // -- lifecycle --------------------------------------------------------------
@@ -792,7 +795,7 @@ export const useStore = create<State>((set, get) => ({
       return;
     }
 
-    set({ updateStage: 'ready' });
+    set({ updateStage: 'ready', updateBannerHidden: false });
     void get().notify(
       'app.update_ready',
       `Verze ${result.info.version} je připravená`,
@@ -802,14 +805,22 @@ export const useStore = create<State>((set, get) => ({
 
   installUpdate: async () => {
     if (get().updateStage !== 'ready') return;
-    const error = await relaunchApp();
+    // On Windows this does not come back - the installer takes over and the
+    // process ends. Anything below runs only if the handover failed.
+    const error = await runInstaller();
     if (error) {
       set({ updateStage: 'error', updateError: error });
-      get().toast('error', `Restart se nepodařil: ${error.message}. Zavřete a spusťte aplikaci ručně.`);
+      get().toast(
+        'error',
+        `Instalaci se nepodařilo spustit: ${error.message}. Zkuste stáhnout instalátor ručně z GitHubu.`,
+      );
     }
   },
 
-  dismissUpdate: () => set({ updateStage: 'idle', updateError: null }),
+  // Closes the strip only. Throwing away a verified download because someone
+  // clicked the cross would mean fetching it all over again, and the Restart
+  // button in settings has to keep working.
+  dismissUpdate: () => set({ updateBannerHidden: true }),
 
   openContextMenu: (x, y, items) => set({ contextMenu: { x, y, items } }),
   closeContextMenu: () => set({ contextMenu: null }),

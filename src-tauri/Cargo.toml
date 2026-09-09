@@ -1,6 +1,6 @@
 [package]
 name = "notes-mj"
-version = "1.1.1"
+version = "1.1.2"
 description = "Notes_MJ - a local-first personal task and note manager"
 authors = ["Michal Jašek"]
 edition = "2021"
@@ -36,7 +36,6 @@ tauri-plugin-clipboard-manager = "2.1.0-beta.7"
 # Updating is desktop-only; on any other target these simply are not compiled.
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"
-tauri-plugin-process = "2"
 
 [dev-dependencies]
 tempfile = "3"
