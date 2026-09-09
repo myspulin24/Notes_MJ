@@ -208,7 +208,9 @@ neměl zároveň přepnout motiv.
 
 ## Oznámení
 
-Nastavení → **Připomínky a aplikace**. Stránka má tři části:
+Nastavení → **Připomínky a aplikace**. Stránka začíná verzí aplikace
+a tlačítkem na kontrolu aktualizací (viz [Aktualizace](#aktualizace)),
+pod tím jsou tři části:
 
 1. **Oznámení celkem** — hlavní vypínač a čtyři řádky stavu, které říkají, co
    se opravdu stane: jestli Windows oznámení povoluje, jestli je zapnutý hlavní
@@ -228,6 +230,7 @@ Nastavení → **Připomínky a aplikace**. Stránka má tři části:
 | **Události a dárky** | vytvoření události, blížící se událost, přidání dárku, koupení dárku, překročení rozpočtu |
 | **Soustředěná práce** | začátek a konec odpočtu |
 | **Data a zálohy** | hotová záloha, neúspěšná záloha, hotový export, hotový import |
+| **Aplikace a aktualizace** | nalezená aktualizace, připravená aktualizace, neúspěšná aktualizace |
 
 Výchozí nastavení je záměrně tiché u věcí, které děláte desetkrát denně
 (vytvoření a dokončení úkolu), a hlasité u těch, které byste jinak přehlédli
@@ -373,6 +376,13 @@ i během zápisu a je to plnohodnotná databáze.
 
 Ruční zálohu vyvoláte tlačítkem **Zálohovat teď** v Nastavení.
 
+Kromě téhle rotace vzniká ještě jedna kopie, která se **nikdy nemaže**:
+těsně předtím, než nová verze poprvé upraví schéma databáze, se udělá
+snímek `notes_mj-pred-migraci-v<číslo>-<datum>.db`. Do rotace nepatří
+schválně — zrovna tuhle kopii by bylo nejhorší ztratit. Když ji není kam
+zapsat, migrace se neprovede a aplikace to řekne, místo aby schéma změnila
+napůl a bez zálohy.
+
 ### Export a import
 
 **Nastavení a data → Export** nabízí dvě možnosti:
@@ -517,7 +527,8 @@ Co se testuje:
 * **Bezpečné názvy souborů** (`src-tauri/src/paths.rs`) — traversal, zakázané
   a řídicí znaky, vyhrazená jména, zkrácení na hranici znaku.
 * **Zálohy** (`src-tauri/src/backup.rs`) — čitelnost kopie, ořezávání počtu,
-  omezení frekvence.
+  omezení frekvence, a že se databáze před migrací schématu zkopíruje stranou,
+  že se u nové databáze žádná taková kopie nedělá a že ji rotace nesmaže.
 * **End-to-end** (`src-tauri/tests/e2e.rs`) —
   `happy_path_capture_to_archive` projde celý cyklus: zachycení do Doručených,
   zařazení do oblasti a projektu se štítky a termínem, podúkoly, příloha,
