@@ -54,9 +54,10 @@ Další spuštění během vývoje: `npm run app`.
 npm run app:build
 ```
 
-Vytvoří samostatný instalátor `.msi` a `.exe` v
-`src-tauri\target\release\bundle\`. Instaluje se pro aktuálního uživatele, bez
-práv správce. Nainstalovaná aplikace už Node ani Rust nepotřebuje.
+Vytvoří instalátor `Notes_MJ_<verze>_x64-setup.exe` v
+`src-tauri\target\release\bundle\nsis\`. Instaluje se pro aktuálního uživatele,
+bez práv správce. Nainstalovaná aplikace už Node ani Rust nepotřebuje a umí se
+sama aktualizovat.
 
 ---
 
@@ -280,6 +281,13 @@ tajemství. V aplikaci je zapečený odpovídající veřejný klíč a instalá
 podpis nesedí, se odmítne dřív, než se spustí jediný jeho bajt. I kdyby někdo
 ovládl release stránku a podstrčil tam cizí `.exe`, nainstalovaným kopiím ho
 nepodstrčí.
+
+**Proč jen jeden druh instalátoru**
+
+Notes_MJ se vydává jako `.exe` (NSIS), ne jako `.msi`. Důvod je praktický:
+NSIS instaluje jen pro přihlášeného uživatele a neptá se na práva správce,
+takže aktualizace proběhne bez jediného kliknutí navíc. MSI by chtělo UAC
+a instalovalo by se pro celý počítač — vedle stávající instalace, ne přes ni.
 
 **Když to nejde**
 

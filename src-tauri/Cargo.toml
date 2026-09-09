@@ -1,6 +1,6 @@
 [package]
 name = "notes-mj"
-version = "1.1.0"
+version = "1.1.1"
 description = "Notes_MJ - a local-first personal task and note manager"
 authors = ["Michal Jašek"]
 edition = "2021"
