@@ -13,6 +13,7 @@ import {
   applyDownloadEvent,
   describeUpdate,
   shortDate,
+  updateStatusLine,
   NO_PROGRESS,
 } from '../lib/updater';
 import type { DownloadEvent, DownloadProgress } from '../lib/updater';
@@ -123,5 +124,38 @@ describe('describeUpdate', () => {
 
   it('omits the brackets when there is not', () => {
     expect(describeUpdate({ version: '1.2.0', notes: '', date: '' })).toBe('verze 1.2.0');
+  });
+});
+
+describe('updateStatusLine', () => {
+  it('mlčí, když se nic neděje', () => {
+    // null is the signal for the sidebar to show the copyright instead.
+    expect(updateStatusLine('idle', null, null)).toBeNull();
+    expect(updateStatusLine('current', '1.2.0', null)).toBeNull();
+    expect(updateStatusLine('error', null, null)).toBeNull();
+  });
+
+  it('hlásí probíhající kontrolu', () => {
+    expect(updateStatusLine('checking', null, null)).toBe('Hledám aktualizaci…');
+  });
+
+  it('ukazuje procenta, když je co počítat', () => {
+    expect(updateStatusLine('downloading', '1.3.0', 0.42)).toBe('Stahuji… 42 %');
+    expect(updateStatusLine('downloading', '1.3.0', 1)).toBe('Stahuji… 100 %');
+  });
+
+  it('bez známé velikosti procenta nevymýšlí', () => {
+    expect(updateStatusLine('downloading', '1.3.0', null)).toBe('Stahuji aktualizaci…');
+  });
+
+  it('pojmenuje verzi, když ji zná', () => {
+    expect(updateStatusLine('available', '1.3.0', null)).toBe('Verze 1.3.0 je k dispozici');
+    expect(updateStatusLine('ready', '1.3.0', null)).toBe('Verze 1.3.0 čeká na restart');
+  });
+
+  it('poradí si i bez čísla verze', () => {
+    // The plugin has always given us one, but a blank line would look broken.
+    expect(updateStatusLine('ready', null, null)).toBe('Nová verze čeká na restart');
+    expect(updateStatusLine('available', '', null)).toBe('Nová verze je k dispozici');
   });
 });

@@ -246,3 +246,35 @@ export async function discardUpdate(): Promise<void> {
   // Best effort: a handle we could not close is not worth a message.
   await held?.close().catch(() => {});
 }
+
+/**
+ * The one-line status the sidebar foot shows while something is going on.
+ *
+ * Returns null when nothing is - which is the signal to fall back to whatever
+ * the caller shows at rest. Kept out of the component because the precedence
+ * is the part that can go wrong: a live stage always outranks the "up to date"
+ * message, or a second check would leave a stale answer sitting under a
+ * spinner.
+ */
+export function updateStatusLine(
+  stage: 'idle' | 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'error',
+  version: string | null,
+  fraction: number | null,
+): string | null {
+  const named = version ? `Verze ${version}` : 'Nová verze';
+  switch (stage) {
+    case 'checking':
+      return 'Hledám aktualizaci…';
+    case 'downloading':
+      // Without a declared size there is no honest percentage to show.
+      return fraction === null
+        ? 'Stahuji aktualizaci…'
+        : `Stahuji… ${Math.round(fraction * 100)} %`;
+    case 'available':
+      return `${named} je k dispozici`;
+    case 'ready':
+      return `${named} čeká na restart`;
+    default:
+      return null;
+  }
+}

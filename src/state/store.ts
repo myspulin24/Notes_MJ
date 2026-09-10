@@ -182,8 +182,11 @@ interface State {
   openContextMenu: (x: number, y: number, items: MenuItem[]) => void;
   closeContextMenu: () => void;
 
-  /** `manual` is the button; the startup check passes false and stays quiet. */
-  checkForUpdates: (manual: boolean) => Promise<void>;
+  /**
+   * Looks for a new version. Nothing pops up: the answer appears in the foot
+   * of the sidebar and in the settings panel, which is where it was asked for.
+   */
+  checkForUpdates: () => Promise<void>;
   /** Fetches the update found by the last check, whatever the auto setting says. */
   downloadUpdateNow: () => Promise<void>;
   installUpdate: () => Promise<void>;
@@ -309,7 +312,7 @@ export const useStore = create<State>((set, get) => ({
       // Deliberately after the first paint and off the critical path: a slow
       // or unreachable GitHub must never delay the window opening.
       if (get().settings?.updates_check_on_start ?? true) {
-        window.setTimeout(() => void get().checkForUpdates(false), 4000);
+        window.setTimeout(() => void get().checkForUpdates(), 4000);
       }
     } catch (error) {
       set({ bootState: 'error', bootError: toAppError(error) });
@@ -726,35 +729,26 @@ export const useStore = create<State>((set, get) => ({
 
   bumpPlanner: () => set((s) => ({ plannerVersion: s.plannerVersion + 1 })),
 
-  checkForUpdates: async (manual) => {
+  checkForUpdates: async () => {
     // A check already running must not be started twice by an impatient click,
     // and a download in flight must certainly not be interrupted by one.
     const stage = get().updateStage;
     if (stage === 'checking' || stage === 'downloading') return;
-    if (stage === 'ready') {
-      if (manual) get().toast('info', 'Aktualizace je stažená a čeká na restart.');
-      return;
-    }
+    // Already staged: the foot of the sidebar is showing the Restart button.
+    if (stage === 'ready') return;
 
     set({ updateStage: 'checking', updateError: null });
     const result = await checkForUpdate();
     const checkedAt = new Date().toISOString();
 
     if (result.kind === 'unsupported') {
-      // A browser tab. Say so only if the user asked.
+      // A browser tab, where there is nothing to update.
       set({ updateStage: 'idle', updateCheckedAt: checkedAt });
-      if (manual) {
-        get().toast('info', 'Aktualizace fungují jen v nainstalované aplikaci.');
-      }
       return;
     }
 
     if (result.kind === 'error') {
       set({ updateStage: 'error', updateError: result.error, updateCheckedAt: checkedAt });
-      // A failed background check is not news; a failed deliberate one is.
-      if (manual) {
-        get().toast('error', `Kontrolu aktualizací se nepodařilo dokončit: ${result.error.message}`);
-      }
       void get().notify(
         'app.update_failed',
         'Kontrola aktualizací selhala',
@@ -765,7 +759,6 @@ export const useStore = create<State>((set, get) => ({
 
     if (result.kind === 'current') {
       set({ updateStage: 'current', updateInfo: null, updateCheckedAt: checkedAt });
-      if (manual) get().toast('success', 'Máte nejnovější verzi.');
       return;
     }
 
@@ -776,15 +769,8 @@ export const useStore = create<State>((set, get) => ({
       'Stahuje se na pozadí.',
     );
 
-    if (!(get().settings?.updates_auto_download ?? true)) {
-      if (manual) {
-        get().toast(
-          'info',
-          `K dispozici je verze ${result.info.version}. Stažení spustíte tlačítkem.`,
-        );
-      }
-      return;
-    }
+    // With auto-download off the sidebar foot offers the download instead.
+    if (!(get().settings?.updates_auto_download ?? true)) return;
 
     await get().downloadUpdateNow();
   },
@@ -799,7 +785,6 @@ export const useStore = create<State>((set, get) => ({
 
     if (!downloaded.ok) {
       set({ updateStage: 'error', updateError: downloaded.error });
-      get().toast('error', `Aktualizaci se nepodařilo stáhnout: ${downloaded.error.message}`);
       void get().notify(
         'app.update_failed',
         'Aktualizaci se nepodařilo stáhnout',
@@ -823,10 +808,6 @@ export const useStore = create<State>((set, get) => ({
     const error = await runInstaller();
     if (error) {
       set({ updateStage: 'error', updateError: error });
-      get().toast(
-        'error',
-        `Instalaci se nepodařilo spustit: ${error.message}. Zkuste stáhnout instalátor ručně z GitHubu.`,
-      );
     }
   },
 

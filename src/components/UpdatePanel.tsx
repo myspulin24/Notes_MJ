@@ -49,7 +49,7 @@ export function UpdatePanel() {
             type="button"
             className="btn"
             disabled={busy}
-            onClick={() => void checkForUpdates(true)}
+            onClick={() => void checkForUpdates()}
           >
             <DownloadIcon size={15} />
             {busy ? 'Pracuji…' : 'Zkontrolovat aktualizace'}

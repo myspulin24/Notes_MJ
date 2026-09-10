@@ -149,6 +149,9 @@ Postranní panel patří Plánovači; Poznámky i Události mají vlastní sloup
 seznamem, takže dostanou celé okno. **Nastavení a data** je proto vpravo nahoře,
 aby bylo po ruce ze všech karet.
 
+Dole v postranním panelu je verze aplikace, copyright a kolečko, kterým se
+kontrolují aktualizace — podrobněji v [Aktualizace](#aktualizace).
+
 Která karta svítí, se **odvozuje z toho, kde právě jste** — nikde se to
 nepamatuje. Proto přepnutí funguje i oklikou: klik na dárek v kalendáři otevře
 událost a karta se přepne sama.
@@ -295,9 +298,16 @@ https://github.com/myspulin24/Notes_MJ/releases
 4. Kliknete na Restartovat, aplikace se zavře, instalátor proběhne bez ptaní
    a Notes_MJ se otevře v nové verzi.
 
-Ručně kdykoliv: **Nastavení a data → Připomínky a aplikace → Zkontrolovat
-aktualizace**. Tamtéž je vidět nainstalovaná verze a dají se vypnout obě
-automatiky (hledání po spuštění i stahování na pozadí).
+Ručně kdykoliv dvěma způsoby:
+
+* **Vlevo dole v postranním panelu** — pod číslem verze a copyrightem je
+  kolečko. Kliknutím se spustí kontrola; kolečko se točí, dokud běží, a řádek
+  pod verzí na chvíli řekne výsledek („Máte nejnovější verzi“) a pak se vrátí
+  zpátky k copyrightu. Když je nová verze stažená, kolečko dostane tepající
+  tečku a kliknutí rovnou restartuje a doinstaluje.
+* **Nastavení a data → Připomínky a aplikace** — tamtéž se dají vypnout obě
+  automatiky (hledání po spuštění i stahování na pozadí) a je vidět, kdy
+  proběhla poslední kontrola.
 
 **Vaše data zůstávají**. Aktualizace vymění program, ne databázi. Ta leží jinde
 (viz [Kde jsou vaše data](#kde-jsou-vaše-data)) a aktualizace se jí nedotkne. Pokud
@@ -586,7 +596,9 @@ Co se testuje:
   jde vypnout i odmítnout, a nad tím geometrie: překlopení nabídky u okraje
   obrazovky, pohyb šipkami přes oddělovače a vypnuté položky, vkládání textu
   přes výběr.
-* **Aktualizace** (`src/__tests__/updater.test.ts`) — skládání průběhu
+* **Aktualizace** (`src/__tests__/updater.test.ts`) — hláška v patičce
+  panelu, hlavně její přednost (probíhající stahování nesmí přebít hotový
+  výsledek) a to, že bez známé velikosti souboru nevymýšlí procenta; skládání průběhu
   stahování z událostí pluginu: server, který neřekne velikost souboru, server,
   který ji řekne špatně (ukazatel nesmí přeskočit 100 %), záporný přírůstek,
   druhé stahování po prvním, a čtení časového razítka, které není ISO.

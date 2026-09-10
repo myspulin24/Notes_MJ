@@ -12,6 +12,7 @@ import { api } from '../lib/api';
 import { areaMenu, filterMenu, projectMenu } from '../lib/menus';
 import type { SidebarActions } from '../lib/menus';
 import { useMenu } from '../lib/useMenu';
+import { SidebarFooter } from './SidebarFooter';
 import type { Counts, ViewName } from '../lib/types';
 import { useStore } from '../state/store';
 import type { Route } from '../state/store';
@@ -374,6 +375,8 @@ export function Sidebar() {
           </form>
         ) : null}
       </div>
+
+      <SidebarFooter />
     </nav>
   );
 }
