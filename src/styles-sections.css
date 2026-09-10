@@ -373,3 +373,183 @@ html[data-motion='reduced'] .sidebar-foot-btn:hover:not(:disabled) {
     transform: none;
   }
 }
+
+/* -- quick capture: the click-anything rows --------------------------------- */
+
+.capture-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px 10px;
+}
+
+.capture-row-label {
+  flex: none;
+  width: 58px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.capture-project-row {
+  padding-top: 12px;
+  margin-top: 2px;
+  border-top: 1px solid var(--line);
+}
+
+/* A segmented control: one group, one visible seam between the buttons. */
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.seg-btn {
+  padding: 4px 11px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--bg-sunken);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+.seg-btn:first-child {
+  border-left: 0;
+}
+.seg-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.seg-btn.on {
+  background: var(--accent);
+  color: #fff;
+}
+/* Priority keeps its own colours when chosen, the way it looks in a list. */
+.seg-btn.on.prio-3 {
+  background: var(--danger);
+}
+.seg-btn.on.prio-2 {
+  background: var(--warn);
+  color: #1b1b20;
+}
+
+.capture-date {
+  padding: 3px 8px;
+  font-size: 12px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+}
+.capture-date:hover {
+  border-color: var(--line-strong);
+}
+
+.capture-chosen {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 9px;
+  font-size: 12px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+}
+
+.capture-clear {
+  display: flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.capture-clear:hover {
+  opacity: 1;
+}
+
+.capture-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* A tag chip you can press, as opposed to one that only reports. */
+.chip.pick {
+  cursor: pointer;
+  background: var(--bg-sunken);
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+.chip.pick:hover {
+  background: var(--bg-hover);
+  border-color: var(--line-strong);
+}
+.chip.pick.on {
+  background: var(--accent-soft);
+}
+
+.capture-select {
+  padding: 3px 8px;
+  font-size: 12px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+
+html[data-motion='reduced'] .seg-btn,
+html[data-motion='reduced'] .chip.pick {
+  transition: none;
+}
+
+/* -- dialogs: use the height that is there ---------------------------------- */
+
+/*
+ * The body used to be capped at 62vh regardless of the window, so the settings
+ * dialog scrolled while 150 px of empty screen sat underneath it, and the last
+ * visible row was always sliced through the middle. Now the dialog grows to
+ * whatever the backdrop leaves it and only the body scrolls.
+ */
+.modal-backdrop {
+  padding: 8vh 16px 8vh;
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  min-height: 0;
+}
+
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.settings-layout {
+  flex: 1;
+  min-height: 0;
+}
+
+/* A little air after the last setting, so it never ends flush with the edge. */
+.modal.settings .modal-body {
+  padding-bottom: 26px;
+}
+
+.tag-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 7px;
+}

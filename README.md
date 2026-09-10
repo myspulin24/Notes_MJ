@@ -65,7 +65,7 @@ sama aktualizovat.
 ## Co Notes_MJ umí
 
 **Zachycení** — klávesa `N` kdekoli otevře jednořádkové okno. Přímo v textu lze
-psát `#štítek`, `!1`–`!3` pro prioritu a `@dnes` / `@pátek` / `@2026-09-20` pro
+psát `#štítek`, `!1`–`!3` pro prioritu a `@dnes` / `@pátek` / `@24.12.` pro
 termín zahájení. `Ctrl+Enter` uloží a nechá okno otevřené pro další úkol.
 
 **Pohledy** — Doručené, Dnes, Nadcházející, Kdykoli, Někdy, Dokončené.
@@ -133,6 +133,25 @@ překlopení opakovaného úkolu na další výskyt i celý import.
 
 **Archiv** — nic se nemaže. Každý dokončený výskyt opakovaného úkolu zůstává
 samostatným záznamem v Dokončených.
+
+### Zadávání: psát, nebo klikat
+
+Rychlé zadání (`N`) umí obojí a nic z toho není povinné znát:
+
+| | |
+|---|---|
+| **Kam** | projekt, nebo Doručené |
+| **Kdy** | Dnes / Zítra / Pondělí, nebo datum z kalendáře |
+| **Priorita** | Nízká / Střední / Vysoká, barevně jako v seznamu |
+| **Štítky** | ty, které už máte, jako přepínatelné odznáčky |
+
+Kdo to má v prstech, píše dál rovnou do věty: `#štítek`, `!1`–`!3`,
+`@dnes` `@zítra` `@pátek` `@24.12.` `@24.12.2026`. Obojí míří do jednoho
+úkolu; když se rozejdou, platí to, na co jste klikli. Datum bez roku znamená
+nejbližší příští výskyt — `@1.3.` napsané v září je březen příštího roku.
+
+Stejné odznáčky se štítky jsou i v detailu úkolu, takže ani tam se štítek
+nemusí trefovat po paměti.
 
 ### Tři karty
 
@@ -509,6 +528,15 @@ aplikaci. Stahování i ověření podpisu běží v Rustu, ne v okně — strá
 `'self'`). Instalace se nikdy nespustí sama: `relaunch()` zavolá až kliknutí na
 Restartovat.
 
+### Čeština v systémových prvcích
+
+Kalendáříky u datových polí, jejich formát i názvy měsíců kreslí prohlížeč,
+ne aplikace, a řídí se **jazykem prohlížeče**, nikoli atributem `lang` na
+stránce. Proto se WebView2 spouští s `--lang=cs-CZ` (`additionalBrowserArgs` v
+`tauri.conf.json`). Bez toho se datum ukazovalo jako `2026-09-10` místo
+`10.09.2026`. Atribut `lang="cs"` v `index.html` je tam také — kvůli
+dělení slov a kontrole pravopisu.
+
 ### Oprávnění, která si aplikace vyžádá
 
 | Oprávnění | K čemu | Bez něj |
@@ -605,6 +633,9 @@ Co se testuje:
 * **Karty** (`src/__tests__/sections.test.ts`) — že každá cesta v aplikaci
   vede na nějakou kartu (včetně jedné události otevřené z kalendáře), že domov
   každé karty ukazuje zase na ni, a že směr animace odpovídá pořadí v liště.
+* **České datum** (`src/__tests__/capture.test.ts`) — že `@20.9.` padne na
+  nejbližší příští dvacátého devátý, že `@31.2.` se odmítne místo aby se
+  posunulo na březen, a že `@29.2.` přeskočí na nejbližší přestupný rok.
 * **Klávesnice** (`src/__tests__/keys.test.ts`) — že číselné zkratky
   fungují i na české klávesnici, kde ta klávesa píše ě, š, č a ne číslici.
 * **TypeScript** (`src/__tests__/`) — parser dotazů, práce s daty a českým

@@ -5,13 +5,20 @@
  * needs the mouse. Type the title; add `#tag`, `!1..!3` for priority, and
  * `@today` / `@tomorrow` / `@monday` / `@2026-09-20` for when - all inline.
  * Enter saves and closes; Ctrl+Enter saves and stays open for the next one.
+ *
+ * Everything the shorthand can do is also a button, because knowing that `!2`
+ * means "medium priority" is not a reasonable thing to require of anybody. The
+ * two ways feed one draft: the line is parsed as it is typed, the buttons hold
+ * their own choices, and a button wins where they disagree.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { addDays, isValidISODate, nextWeekday, relativeDateLabel } from '../lib/dates';
+import { addDays, isValidISODate, nextWeekday } from '../lib/dates';
 import type { NewTask, Project } from '../lib/types';
 import { useStore } from '../state/store';
+import { CaptureFields, NO_PICKS } from './CaptureFields';
+import type { CapturePicks } from './CaptureFields';
 import { CloseIcon } from './Icons';
 
 interface Props {
@@ -92,6 +99,37 @@ function resolveWhen(value: string, today: string): string | null {
   if (value === 'week' || value === 'týden' || value === 'tyden') return addDays(today, 7);
   if (WEEKDAYS[value] !== undefined) return nextWeekday(today, WEEKDAYS[value]);
   if (isValidISODate(value)) return value;
+  return resolveCzechDate(value, today);
+}
+
+/**
+ * `20.9.`, `20.9.2026` or `20. 9.` - the way a date is written in Czech.
+ *
+ * Without a year, it means the next time that day comes round: 20.9. typed in
+ * October is next year's, not one three weeks in the past. A date that does
+ * not exist (31.2.) is refused rather than rolled forward into March, because
+ * silently filing a task on the wrong day is worse than not understanding it.
+ */
+export function resolveCzechDate(value: string, today: string): string | null {
+  const match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})?$/.exec(value.replace(/\s+/g, ''));
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const iso = (year: number) => `${year}-${pad(month)}-${pad(day)}`;
+
+  if (match[3]) {
+    const explicit = iso(Number(match[3]));
+    return isValidISODate(explicit) ? explicit : null;
+  }
+
+  const thisYear = Number(today.slice(0, 4));
+  for (let year = thisYear; year <= thisYear + 8; year++) {
+    const candidate = iso(year);
+    if (isValidISODate(candidate) && candidate >= today) return candidate;
+  }
+  // Nothing in eight years: the day does not exist at all, as in 31.2.
   return null;
 }
 
@@ -102,8 +140,9 @@ export function QuickCapture({
   defaultAreaId,
   defaultStartOn,
 }: Props) {
-  const { today, capture, projects, toast } = useStore();
+  const { today, capture, projects, tags, toast } = useStore();
   const [text, setText] = useState('');
+  const [picks, setPicks] = useState<CapturePicks>(NO_PICKS);
   const [projectId, setProjectId] = useState<string | null>(defaultProjectId ?? null);
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -111,6 +150,7 @@ export function QuickCapture({
   useEffect(() => {
     if (open) {
       setText('');
+      setPicks(NO_PICKS);
       setProjectId(defaultProjectId ?? null);
       // Wait for the dialog to be painted before taking focus.
       requestAnimationFrame(() => inputRef.current?.focus());
@@ -121,15 +161,21 @@ export function QuickCapture({
 
   if (!open) return null;
 
+  // The day the dialog was opened on is the starting point, but only until the
+  // user says otherwise - by typing @, or by touching the buttons.
+  const typedStartOn = draft.startOn ?? defaultStartOn ?? null;
+  const startOn = picks.startOn !== undefined ? picks.startOn : typedStartOn;
+  const priority = picks.priority ?? draft.priority;
+  const chosenTags = [...new Set([...draft.tags, ...picks.tags])];
+
   const submit = async (keepOpen: boolean) => {
     if (!draft.title || saving) return;
     setSaving(true);
     const input: NewTask = {
       title: draft.title,
-      tag_names: draft.tags,
-      priority: draft.priority,
-      // Anything typed with @ wins over the day the dialog was opened from.
-      start_on: draft.startOn ?? defaultStartOn ?? null,
+      tag_names: chosenTags,
+      priority,
+      start_on: startOn,
       project_id: projectId,
       area_id: projectId ? null : (defaultAreaId ?? null),
     };
@@ -139,6 +185,7 @@ export function QuickCapture({
 
     if (keepOpen) {
       setText('');
+      setPicks(NO_PICKS);
       inputRef.current?.focus();
       toast('success', `Přidáno „${created.title}“.`);
     } else {
@@ -183,33 +230,23 @@ export function QuickCapture({
             </button>
           </div>
 
-          <div className="capture-preview">
-            {draft.tags.map((tag) => (
-              <span key={tag} className="chip chip-tag">
-                {tag}
-              </span>
-            ))}
-            {draft.priority ? (
-              <span className={`chip prio-chip prio-${draft.priority}`}>
-                Priorita {draft.priority}
-              </span>
-            ) : null}
-            {draft.startOn ?? defaultStartOn ? (
-              <span className="chip chip-when">
-                {relativeDateLabel((draft.startOn ?? defaultStartOn)!, today)}
-              </span>
-            ) : null}
-            <ProjectPicker
-              projects={projects}
-              value={projectId}
-              onChange={setProjectId}
-            />
+          <div className="capture-row capture-project-row">
+            <span className="capture-row-label">Kam</span>
+            <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />
           </div>
+
+          <CaptureFields
+            today={today}
+            tags={tags}
+            picks={picks}
+            onChange={setPicks}
+            typed={{ startOn: typedStartOn, priority: draft.priority, tags: draft.tags }}
+          />
 
           <footer className="capture-foot">
             <p className="hint">
-              <code>#štítek</code> · <code>!1</code>–<code>!3</code> priorita ·{' '}
-              <code>@dnes</code> <code>@pátek</code> <code>@2026-09-20</code>
+              Rychleji rovnou v textu: <code>#štítek</code> · <code>!1</code>–<code>!3</code>{' '}
+              priorita · <code>@dnes</code> <code>@pátek</code> <code>@20.9.</code>
             </p>
             <div className="capture-actions">
               <span className="hint">
@@ -239,10 +276,9 @@ function ProjectPicker({
   value: string | null;
   onChange: (id: string | null) => void;
 }) {
-  if (!projects.length) return null;
   return (
     <select
-      className="mini-select"
+      className="capture-select"
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value || null)}
       aria-label="Projekt"

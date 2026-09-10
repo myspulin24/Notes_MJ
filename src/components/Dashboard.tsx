@@ -335,7 +335,7 @@ export function Dashboard({ onCapture }: { onCapture: () => void }) {
 
             case 'streak':
               return (
-                <Card key={card} icon={<TargetIcon size={16} />} title="Aktivita">
+                <Card key={card} icon={<TargetIcon size={16} />} title="Aktivita" wide>
                   <div className="streak">
                     <div className="streak-number">
                       <strong>{data.streak_days}</strong>
@@ -411,6 +411,7 @@ function Card({
   title,
   count,
   tone,
+  wide,
   onOpen,
   action,
   children,
@@ -419,12 +420,14 @@ function Card({
   title: string;
   count?: number;
   tone?: 'danger';
+  /** Spans the whole grid. For cards that are a chart, not a list. */
+  wide?: boolean;
   onOpen?: () => void;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className={`dash-card${tone ? ` tone-${tone}` : ''}`}>
+    <section className={`dash-card${tone ? ` tone-${tone}` : ''}${wide ? ' wide' : ''}`}>
       <header>
         <span className="dash-card-icon">{icon}</span>
         {onOpen ? (

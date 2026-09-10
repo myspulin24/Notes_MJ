@@ -49,7 +49,7 @@
 
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   gap: 10px;
   margin-bottom: 18px;
 }
@@ -338,7 +338,7 @@
 }
 .activity {
   display: grid;
-  grid-template-columns: repeat(14, 1fr);
+  grid-template-columns: repeat(15, 1fr);
   gap: 3px;
   margin-bottom: 10px;
 }
@@ -401,6 +401,7 @@
   flex: 1;
   display: grid;
   gap: 3px;
+  grid-template-rows: auto;
   grid-auto-rows: minmax(0, 1fr);
   min-height: 0;
 }
@@ -1129,4 +1130,63 @@
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
+}
+
+/*
+ * A form that stops halfway across its column reads as unfinished, so the
+ * controls in a row share the width instead of each sizing to its own content.
+ */
+.occasion-form .field-row {
+  display: flex;
+  gap: 8px;
+}
+.occasion-form .field-row > select,
+.occasion-form .field-row > input {
+  flex: 1;
+  min-width: 0;
+}
+.occasion-form .field-row > .check-label {
+  flex: none;
+}
+.occasion-form .field-row:last-child > .btn {
+  flex: 1;
+}
+.occasion-form .check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/*
+ * The day panel: the "add" button belongs at the bottom of the column, with
+ * whatever is above it taking the slack. Otherwise an empty day leaves the
+ * button floating in the middle of nothing.
+ */
+.calendar-day-panel .day-tasks,
+.calendar-day-panel > .state {
+  flex: 1;
+  min-height: 0;
+}
+.calendar-day-panel > .btn.wide {
+  margin-top: auto;
+}
+
+/*
+ * The activity heat map is a chart, not a list: half a row of it looks like a
+ * card that failed to load. Spanning the grid also stops the last card in an
+ * odd-numbered set from sitting alone at half width.
+ */
+.dash-card.wide {
+  grid-column: 1 / -1;
+}
+
+/*
+ * A heat map is meant to be read as a shape, not as a row of tiles: in a card
+ * spanning the whole grid, `1fr` columns blew each day up to 60 px. Cap them.
+ */
+.dash-card.wide .activity {
+  grid-template-columns: repeat(15, minmax(0, 18px));
+  justify-content: start;
 }

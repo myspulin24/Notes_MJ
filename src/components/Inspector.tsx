@@ -20,11 +20,22 @@ import {
   TrashIcon,
 } from './Icons';
 import { RepeatEditor } from './RepeatEditor';
+import { TagPicker } from './TagPicker';
 import { InlineError, LoadingState } from './States';
 
 export function Inspector({ taskId, onClose }: { taskId: string; onClose: () => void }) {
-  const { today, projects, areas, patchTask, removeTask, setStatus, startFocus, reportError, refresh } =
-    useStore();
+  const {
+    today,
+    projects,
+    areas,
+    tags: allTags,
+    patchTask,
+    removeTask,
+    setStatus,
+    startFocus,
+    reportError,
+    refresh,
+  } = useStore();
 
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [error, setError] = useState<AppError | null>(null);
@@ -236,6 +247,19 @@ export function Inspector({ taskId, onClose }: { taskId: string; onClose: () => 
         {/* -- tags -------------------------------------------------------- */}
         <section className="field">
           <h3>Štítky</h3>
+          <TagPicker
+            all={allTags}
+            chosen={task.tags.map((t) => t.name)}
+            onToggle={(name) => {
+              const current = task.tags.map((t) => t.name);
+              const next = current.some((c) => c.toLowerCase() === name.toLowerCase())
+                ? current.filter((c) => c.toLowerCase() !== name.toLowerCase())
+                : [...current, name];
+              // The text field mirrors the task, so it has to follow along.
+              setTagText(next.join(', '));
+              void apply({ tag_names: next });
+            }}
+          />
           <input
             value={tagText}
             placeholder="domov, pochůzky"
@@ -246,7 +270,7 @@ export function Inspector({ taskId, onClose }: { taskId: string; onClose: () => 
                 .map((t) => t.trim())
                 .filter(Boolean);
               const current = task.tags.map((t) => t.name);
-              if (names.join(' ') !== current.join(' ')) {
+              if (names.join('\u0000') !== current.join('\u0000')) {
                 void apply({ tag_names: names });
               }
             }}

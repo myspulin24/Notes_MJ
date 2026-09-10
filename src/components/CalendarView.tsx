@@ -237,7 +237,17 @@ export function CalendarView({ onCaptureOn }: { onCaptureOn: (date: string) => v
       <aside className="calendar-day-panel">
         <header>
           <h2>{relativeDateLabel(selected, today)}</h2>
-          <p className="muted">{longDate(selected)}</p>
+          <p className="muted">
+            {longDate(selected)}
+            {selectedDay?.tasks.length
+              ? ` · ${selectedDay.tasks.length} ${plural(
+                  selectedDay.tasks.length,
+                  'úkol',
+                  'úkoly',
+                  'úkolů',
+                )}${selectedDay.completed > 0 ? `, ${selectedDay.completed} hotovo` : ''}`
+              : ''}
+          </p>
         </header>
 
         {selectedDay?.occasions.length ? (
@@ -321,14 +331,6 @@ export function CalendarView({ onCaptureOn }: { onCaptureOn: (date: string) => v
           <PlusIcon size={15} />
           Přidat úkol na tento den
         </button>
-
-        {selectedDay ? (
-          <p className="hint">
-            {selectedDay.tasks.length}{' '}
-            {plural(selectedDay.tasks.length, 'úkol', 'úkoly', 'úkolů')}
-            {selectedDay.completed > 0 ? `, z toho ${selectedDay.completed} hotovo` : ''}
-          </p>
-        ) : null}
       </aside>
     </div>
   );
