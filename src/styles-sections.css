@@ -1,0 +1,206 @@
+/*
+ * The top-level tabs and the transition between them.
+ *
+ * Nothing that animates here contains a `position: fixed` element - the
+ * dialogs, the focus view, the toasts and the context menu are all siblings of
+ * the animated pane, not children. A running transform would otherwise become
+ * their containing block and they would drift with the animation.
+ */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* -- the bar ---------------------------------------------------------------- */
+
+.section-bar {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 10px;
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--line);
+}
+
+.section-tabs {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.section-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px 12px;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+
+.section-tab:hover {
+  color: var(--text-dim);
+  background: var(--bg-hover);
+}
+
+.section-tab[data-active='true'] {
+  color: var(--text);
+}
+
+.section-tab-icon {
+  display: flex;
+  color: var(--text-faint);
+  transition: color 0.16s ease, transform 0.24s cubic-bezier(0.22, 0.9, 0.25, 1);
+}
+
+.section-tab[data-active='true'] .section-tab-icon {
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.section-tab kbd {
+  opacity: 0.55;
+}
+
+/* One bar that travels, rather than three that blink on and off. */
+.section-tab-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+  transition:
+    transform 0.3s cubic-bezier(0.22, 0.9, 0.25, 1),
+    width 0.3s cubic-bezier(0.22, 0.9, 0.25, 1);
+}
+
+.section-settings {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: center;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.section-settings:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+  border-color: var(--line);
+}
+
+/* -- the swap --------------------------------------------------------------- */
+
+.section-swap {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+}
+
+.section-swap > * {
+  flex: 1;
+  min-width: 0;
+}
+
+@keyframes section-in-from-right {
+  from {
+    opacity: 0;
+    transform: translate3d(28px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes section-in-from-left {
+  from {
+    opacity: 0;
+    transform: translate3d(-28px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.section-swap[data-dir='1'] {
+  animation: section-in-from-right 0.28s cubic-bezier(0.22, 0.9, 0.25, 1) both;
+}
+
+.section-swap[data-dir='-1'] {
+  animation: section-in-from-left 0.28s cubic-bezier(0.22, 0.9, 0.25, 1) both;
+}
+
+/*
+ * Moving between views inside a tab is a smaller event than changing tab, so
+ * it gets a smaller gesture: a short rise, no sideways travel.
+ */
+.pane-swap {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  animation: pane-in 0.18s ease-out both;
+}
+
+@keyframes pane-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The notebook and the occasion planner bring their own columns. */
+.app.solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/*
+ * "Omezit animace" in the appearance settings, and the system-wide setting,
+ * both land here. The layout must not depend on any of the above.
+ */
+html[data-motion='reduced'] .section-swap,
+html[data-motion='reduced'] .pane-swap,
+html[data-motion='reduced'] .section-tab-bar,
+html[data-motion='reduced'] .section-tab-icon {
+  animation: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-swap,
+  .pane-swap,
+  .section-tab-bar,
+  .section-tab-icon {
+    animation: none;
+    transition: none;
+  }
+}

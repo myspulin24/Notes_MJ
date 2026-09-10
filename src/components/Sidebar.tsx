@@ -1,4 +1,10 @@
-/** The left rail: views, saved filters, areas and projects. */
+/**
+ * The left rail of the Plánovač tab: views, saved filters, areas and projects.
+ *
+ * The notebook and the occasion planner used to hang off the bottom of this
+ * list. They are top-level tabs now, so listing them here as well would be two
+ * doors into one room, each suggesting a different shape of app.
+ */
 
 import { useState } from 'react';
 
@@ -11,16 +17,13 @@ import { useStore } from '../state/store';
 import type { Route } from '../state/store';
 import {
   ArchiveIcon,
-  GiftIcon,
   GridIcon,
-  NoteIcon,
   BoxIcon,
   CalendarIcon,
   InboxIcon,
   LayersIcon,
   PlusIcon,
   SearchIcon,
-  SettingsIcon,
   StarIcon,
   TargetIcon,
 } from './Icons';
@@ -34,7 +37,7 @@ const VIEWS: { view: ViewName; label: string; icon: JSX.Element; countKey: keyof
   { view: 'completed', label: 'Dokončené', icon: <ArchiveIcon />, countKey: 'completed' },
 ];
 
-export function Sidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function Sidebar() {
   const {
     route,
     counts,
@@ -270,38 +273,6 @@ export function Sidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
           </>
         ) : null}
 
-        <h3 className="nav-head">Plánovač</h3>
-        <ul className="nav-list">
-          <li>
-            <button
-              type="button"
-              className={`nav-item${route.kind === 'notes' ? ' active' : ''}`}
-              onClick={() => void navigate({ kind: 'notes' })}
-            >
-              <span className="nav-icon">
-                <NoteIcon size={16} />
-              </span>
-              <span className="nav-label">Zápisník</span>
-              {showHints ? <kbd>Z</kbd> : null}
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              className={`nav-item${
-                route.kind === 'occasions' || route.kind === 'occasion' ? ' active' : ''
-              }`}
-              onClick={() => void navigate({ kind: 'occasions' })}
-            >
-              <span className="nav-icon icon-gift">
-                <GiftIcon size={16} />
-              </span>
-              <span className="nav-label">Události a dárky</span>
-              {showHints ? <kbd>U</kbd> : null}
-            </button>
-          </li>
-        </ul>
-
         <h3 className="nav-head">
           Oblasti
           <button
@@ -403,13 +374,6 @@ export function Sidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
           </form>
         ) : null}
       </div>
-
-      <button type="button" className="nav-item settings" onClick={onOpenSettings}>
-        <span className="nav-icon">
-          <SettingsIcon size={16} />
-        </span>
-        <span className="nav-label">Nastavení a data</span>
-      </button>
     </nav>
   );
 }

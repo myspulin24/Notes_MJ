@@ -7,13 +7,19 @@
  * through the components.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { isDesktop } from './lib/api';
 import { applyAppearance } from './lib/appearance';
 import { editableMenu } from './lib/menus';
+import { digitOf } from './lib/keys';
+import { homeRouteOf, sectionOf, slideDirection, SECTIONS } from './lib/sections';
+import type { Section } from './lib/sections';
 import { useStore } from './state/store';
+import type { Route } from './state/store';
 import { CalendarView } from './components/CalendarView';
+import { PaneSwitch, SectionSwitch } from './components/SectionSwitch';
+import { SectionTabs } from './components/SectionTabs';
 import { ContextMenu } from './components/ContextMenu';
 import { Dashboard } from './components/Dashboard';
 import { FocusView } from './components/FocusView';
@@ -74,6 +80,28 @@ export default function App() {
   const [captureDate, setCaptureDate] = useState<string | null>(null);
   const searching = route.kind === 'search';
   const settings = useStore((s) => s.settings);
+
+  const section = sectionOf(route);
+
+  /**
+   * Which way the arriving tab should slide in.
+   *
+   * Held in a ref rather than state so it is known during the very render that
+   * mounts the new tab - an effect would fire after the animation had already
+   * started - and so that re-renders which do not change the tab leave it
+   * alone, instead of resetting `data-dir` mid-animation.
+   */
+  const lastSection = useRef<{ section: Section; direction: -1 | 0 | 1 }>({
+    section,
+    direction: 0,
+  });
+  if (lastSection.current.section !== section) {
+    lastSection.current = {
+      section,
+      direction: slideDirection(lastSection.current.section, section),
+    };
+  }
+  const direction = lastSection.current.direction;
 
   // The theme, accent, density and font size all live in CSS variables.
   useEffect(() => {
@@ -143,6 +171,17 @@ export default function App() {
         event.preventDefault();
         setCapturing(true);
         return;
+      }
+      // Ctrl+1..3 switch tabs. Plain 1..6 stay as they were, jumping between
+      // the planner's views, so neither meaning gets in the other's way.
+      if (mod && !event.shiftKey) {
+        const digit = digitOf(event);
+        if (digit !== null && digit <= SECTIONS.length) {
+          event.preventDefault();
+          const tab = SECTIONS[digit - 1];
+          void navigate(homeRouteOf(tab.id, useStore.getState().settings?.start_view));
+          return;
+        }
       }
 
       if (event.key === 'Escape') {
@@ -232,7 +271,8 @@ export default function App() {
           void navigate({ kind: 'occasions' });
           break;
         default: {
-          const view = NUMBER_VIEWS[Number(event.key) - 1];
+          const digit = digitOf(event);
+          const view = digit === null ? undefined : NUMBER_VIEWS[digit - 1];
           if (view) {
             event.preventDefault();
             void navigate({ kind: 'view', view });
@@ -297,33 +337,49 @@ export default function App() {
   const heading = headingFor(route, { projects, areas });
 
   return (
-    <div className={`app${inspectorId ? ' with-inspector' : ''}`}>
-      <Sidebar onOpenSettings={() => setSettingsOpen(true)} />
+    <div className="shell">
+      <UpdateBanner />
+      <SectionTabs active={section} onOpenSettings={() => setSettingsOpen(true)} />
 
-      <main className="main">
-        <UpdateBanner />
-        {searching ? <SearchBar onClose={() => void navigate({ kind: 'view', view: 'today' })} /> : null}
-
-        {route.kind === 'dashboard' ? (
-          <Dashboard onCapture={() => openCapture(null)} />
-        ) : route.kind === 'calendar' ? (
-          <CalendarView onCaptureOn={(date) => openCapture(date)} />
-        ) : route.kind === 'notes' ? (
-          <NotesView />
-        ) : route.kind === 'occasions' || route.kind === 'occasion' ? (
-          <OccasionsView focusId={route.kind === 'occasion' ? route.id : null} />
+      <SectionSwitch section={section} direction={direction}>
+        {section === 'notes' ? (
+          <div className="app solo">
+            <NotesView />
+          </div>
+        ) : section === 'occasions' ? (
+          <div className="app solo">
+            <OccasionsView focusId={route.kind === 'occasion' ? route.id : null} />
+          </div>
         ) : (
-          <TaskList
-            title={heading.title}
-            subtitle={heading.subtitle}
-            onCapture={() => openCapture(null)}
-          />
-        )}
-      </main>
+          <div className={`app${inspectorId ? ' with-inspector' : ''}`}>
+            <Sidebar />
 
-      {inspectorId ? (
-        <Inspector taskId={inspectorId} onClose={() => openInspector(null)} />
-      ) : null}
+            <main className="main">
+              {searching ? (
+                <SearchBar onClose={() => void navigate({ kind: 'view', view: 'today' })} />
+              ) : null}
+
+              <PaneSwitch routeKey={routeKey(route)}>
+                {route.kind === 'dashboard' ? (
+                  <Dashboard onCapture={() => openCapture(null)} />
+                ) : route.kind === 'calendar' ? (
+                  <CalendarView onCaptureOn={(date) => openCapture(date)} />
+                ) : (
+                  <TaskList
+                    title={heading.title}
+                    subtitle={heading.subtitle}
+                    onCapture={() => openCapture(null)}
+                  />
+                )}
+              </PaneSwitch>
+            </main>
+
+            {inspectorId ? (
+              <Inspector taskId={inspectorId} onClose={() => openInspector(null)} />
+            ) : null}
+          </div>
+        )}
+      </SectionSwitch>
 
       <QuickCapture
         open={capturing}
@@ -343,6 +399,26 @@ export default function App() {
       <Toasts />
     </div>
   );
+}
+
+/**
+ * A stable string per destination, used to key the pane fade.
+ *
+ * Search deliberately keys on the word "search" and not on the query: retyping
+ * would otherwise re-run the animation on every keystroke.
+ */
+function routeKey(route: Route): string {
+  switch (route.kind) {
+    case 'view':
+      return `view:${route.view}`;
+    case 'project':
+    case 'area':
+      return `${route.kind}:${route.id}`;
+    case 'search':
+      return 'search';
+    default:
+      return route.kind;
+  }
 }
 
 function headingFor(

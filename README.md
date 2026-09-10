@@ -15,19 +15,20 @@ verze — a i ten jde vypnout. Neodesílá při něm nic o vás ani o vašich da
 Podrobně v [Aktualizace](#aktualizace).
 
 ```
-┌─ Přehled ────────┐
-│ Kalendář         │   zachyť → zařaď → naplánuj → udělej → archivuj
-├──────────────────┤
-│ Doručené         │
-│ Dnes             │
-│ Nadcházející     │
-│ Kdykoli          │
-│ Někdy            │
-│ Dokončené        │
-├─ Plánovač ───────┤
-│ Zápisník         │
-│ Události a dárky │
-└──────────────────┘
+┌ Plánovač ─┬ Poznámky ─┬ Události ─────────────────────────┐
+│           │           │                                   │
+├─ Přehled ────────┐                                        │
+│ Kalendář         │   zachyť → zařaď → naplánuj → udělej   │
+├──────────────────┤                                        │
+│ Doručené         │                                        │
+│ Dnes             │                                        │
+│ Nadcházející     │                                        │
+│ Kdykoli          │                                        │
+│ Někdy            │                                        │
+│ Dokončené        │                                        │
+├─ Oblasti ────────┤                                        │
+│ Projekty         │                                        │
+└──────────────────┴────────────────────────────────────────┘
 ```
 
 ---
@@ -133,13 +134,38 @@ překlopení opakovaného úkolu na další výskyt i celý import.
 **Archiv** — nic se nemaže. Každý dokončený výskyt opakovaného úkolu zůstává
 samostatným záznamem v Dokončených.
 
+### Tři karty
+
+Aplikace dělá tři různé věci a každá chce jiné rozložení okna, takže je nahoře
+rozdělená na karty:
+
+| Karta | Co je uvnitř | Zkratka |
+|---|---|---|
+| **Plánovač** | úkoly, projekty, oblasti, kalendář, přehled, hledání | `Ctrl 1` |
+| **Poznámky** | zápisník — všechno, co není úkol | `Ctrl 2` |
+| **Události** | Vánoce, narozeniny, výročí a plánování dárků | `Ctrl 3` |
+
+Postranní panel patří Plánovači; Poznámky i Události mají vlastní sloupec se
+seznamem, takže dostanou celé okno. **Nastavení a data** je proto vpravo nahoře,
+aby bylo po ruce ze všech karet.
+
+Která karta svítí, se **odvozuje z toho, kde právě jste** — nikde se to
+nepamatuje. Proto přepnutí funguje i oklikou: klik na dárek v kalendáři otevře
+událost a karta se přepne sama.
+
+Přechod mezi kartami je krátká animace, která jde zleva doprava nebo zprava
+doleva podle toho, kam v liště krok vede — aby bylo poznat, kterým směrem jste
+se pohnuli. Změna pohledu uvnitř karty dostane jen nenápadné prolnutí. Obojí
+vypne **Nastavení → Vzhled → Omezit animace** i systémové nastavení Windows.
+
 ### Klávesové zkratky
 
 | | |
 |---|---|
 | `N`, `Ctrl+N` | nový úkol |
 | `Ctrl+K` | hledat |
-| `1`–`6` | přepnout pohled |
+| `Ctrl+1`–`Ctrl+3` | přepnout kartu (Plánovač / Poznámky / Události) |
+| `1`–`6` | přepnout pohled v Plánovači |
 | `↑` `↓` / `J` `K` | pohyb v seznamu |
 | `Enter` | otevřít detail |
 | `Mezerník` | dokončit / znovu otevřít |
@@ -564,6 +590,11 @@ Co se testuje:
   stahování z událostí pluginu: server, který neřekne velikost souboru, server,
   který ji řekne špatně (ukazatel nesmí přeskočit 100 %), záporný přírůstek,
   druhé stahování po prvním, a čtení časového razítka, které není ISO.
+* **Karty** (`src/__tests__/sections.test.ts`) — že každá cesta v aplikaci
+  vede na nějakou kartu (včetně jedné události otevřené z kalendáře), že domov
+  každé karty ukazuje zase na ni, a že směr animace odpovídá pořadí v liště.
+* **Klávesnice** (`src/__tests__/keys.test.ts`) — že číselné zkratky
+  fungují i na české klávesnici, kde ta klávesa píše ě, š, č a ne číslici.
 * **TypeScript** (`src/__tests__/`) — parser dotazů, práce s daty a českým
   skloňováním, parser rychlého zachycení, formátování a parsování peněz,
   mřížka kalendáře včetně ISO čísel týdnů.
