@@ -13,6 +13,7 @@ src-tauri/gen/
 .env.*.local
 
 # local user data (also lives outside the repo by default)
+.notes_mj/
 .t3/
 *.db
 *.db-wal

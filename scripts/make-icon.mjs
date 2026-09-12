@@ -1,5 +1,5 @@
 /**
- * Draws the T3 source icon (a checkmark on a rounded square) as a PNG, with no
+ * Draws the Notes_MJ source icon (a checkmark on a rounded square) as a PNG, with no
  * image dependencies. `npx tauri icon` slices this into the per-platform sizes.
  *
  *   node scripts/make-icon.mjs

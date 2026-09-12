@@ -459,3 +459,17 @@ pub fn health(state: State<'_, AppState>) -> Result<Health> {
         checked_at: fmt_ts(Utc::now()),
     })
 }
+
+/// Quits and reopens the app, used to finish an update.
+///
+/// Only macOS and Linux need this. On Windows the updater hands over to the
+/// NSIS installer, which relaunches for us and never returns here; everywhere
+/// else `install` swaps the bundle on disk and comes straight back, leaving
+/// the old build still running in memory. Without this the Restart button
+/// looks like it did nothing.
+///
+/// `restart` never returns, so there is no success to report.
+#[tauri::command]
+pub fn restart_app(app: tauri::AppHandle) {
+    app.restart()
+}

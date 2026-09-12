@@ -11,7 +11,7 @@ import './styles-sections.css';
 
 const container = document.getElementById('root');
 if (!container) {
-  throw new Error('T3 could not find its mount point. The window failed to load.');
+  throw new Error('Notes_MJ could not find its mount point. The window failed to load.');
 }
 
 createRoot(container).render(

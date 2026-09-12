@@ -285,11 +285,11 @@ fn happy_path_capture_to_archive() {
     assert_eq!(saved.query, "tag:money");
 
     // -- 10. Export, then import into an empty database ---------------------
-    let export_path = f._dir.path().join("t3-export.json");
+    let export_path = f._dir.path().join("notes_mj-export.json");
     let bytes = store.export_to_file(&export_path).unwrap();
     assert!(bytes > 0);
     let json = std::fs::read_to_string(&export_path).unwrap();
-    assert!(json.contains("\"format\": \"t3.export\""));
+    assert!(json.contains("\"format\": \"notes_mj.export\""));
 
     let (backup, _) = store.backup_now().unwrap();
     assert!(std::path::Path::new(&backup.path).exists());
@@ -786,7 +786,7 @@ fn an_attachment_that_is_too_big_is_refused_and_nothing_is_copied() {
 }
 
 #[test]
-fn the_orphan_sweep_only_touches_files_t3_wrote() {
+fn the_orphan_sweep_only_touches_files_notes_mj_wrote() {
     let mut f = Fixture::new();
     let attachments = f._dir.path().join("attachments");
 
@@ -923,13 +923,45 @@ fn importing_a_file_that_is_not_an_export_says_so_clearly() {
     assert!(err.contains("nevypadá jako export z Notes_MJ"), "got: {err}");
 
     let future = serde_json::json!({
-        "format": "t3.export", "version": 99, "exported_at": "2026-09-07T00:00:00Z",
+        "format": "notes_mj.export", "version": 99, "exported_at": "2026-09-07T00:00:00Z",
         "app_version": "9.0.0", "attachments_note": "",
         "areas": [], "projects": [], "tags": [], "tasks": [], "saved_filters": []
     })
     .to_string();
     let err = store.import_json(&future, ImportMode::Merge, false).unwrap_err().to_string();
     assert!(err.contains("verzi 99"), "got: {err}");
+
+    let wrong_app = serde_json::json!({
+        "format": "some.other.app", "version": 1, "exported_at": "2026-09-07T00:00:00Z",
+        "app_version": "1.0.0", "attachments_note": "",
+        "areas": [], "projects": [], "tags": [], "tasks": [], "saved_filters": []
+    })
+    .to_string();
+    let err = store.import_json(&wrong_app, ImportMode::Merge, false).unwrap_err().to_string();
+    assert!(err.contains("hlásí jako"), "got: {err}");
+}
+
+#[test]
+fn an_export_written_before_the_rename_still_imports() {
+    // Exports are files people keep for years. The marker inside them changed
+    // when the app was renamed, and refusing the old one would quietly turn
+    // every archived export into an unreadable file.
+    let mut f = Fixture::new();
+    let store = &mut f.store;
+
+    let old = serde_json::json!({
+        "format": "t3.export", "version": 1, "exported_at": "2026-01-01T00:00:00Z",
+        "app_version": "1.0.0", "attachments_note": "",
+        "areas": [{
+            "id": "area-1", "name": "Osobní", "position": 0.0, "archived": false,
+            "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"
+        }],
+        "projects": [], "tags": [], "tasks": [], "saved_filters": []
+    })
+    .to_string();
+
+    let report = store.import_json(&old, ImportMode::Merge, false).unwrap();
+    assert_eq!(report.areas, 1, "oblast ze starého exportu se nenaimportovala");
 }
 
 #[test]

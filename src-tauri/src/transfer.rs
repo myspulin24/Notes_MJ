@@ -20,7 +20,14 @@ use crate::settings::Settings;
 
 /// Bumped only for a breaking change. Importers must refuse a higher version
 /// than they understand rather than guess.
-pub const FORMAT: &str = "t3.export";
+pub const FORMAT: &str = "notes_mj.export";
+
+/// What the format called itself before the rename.
+///
+/// Exports are files people keep. One written last year has to stay importable
+/// forever, so the old marker is accepted on the way in - it is only the way
+/// out that changed.
+pub const LEGACY_FORMAT: &str = "t3.export";
 /// Version 2 added the notebook, occasions, gifts and settings. A version 1
 /// file still imports: every new array carries `#[serde(default)]`, so an
 /// older export simply has none of them.
@@ -28,7 +35,8 @@ pub const FORMAT_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportFile {
-    /// Always `"t3.export"`. Guards against importing an unrelated JSON file.
+    /// Always `"notes_mj.export"` on the way out; `"t3.export"` is still
+    /// accepted on the way in. Guards against importing an unrelated file.
     pub format: String,
     pub version: u32,
     pub exported_at: String,
@@ -251,11 +259,11 @@ impl Store {
     /// so one folder is the whole archive.
     pub fn export_bundle(&self, dir: &std::path::Path) -> Result<String> {
         let stamp = Utc::now().format("%Y%m%d-%H%M%S").to_string();
-        let folder = dir.join(safe_filename(&format!("t3-export-{stamp}")));
+        let folder = dir.join(safe_filename(&format!("notes_mj-export-{stamp}")));
         std::fs::create_dir_all(&folder)
             .map_err(|e| AppError::Io(format!("nelze vytvořit {}: {e}", folder.display())))?;
 
-        self.export_to_file(&folder.join("t3-export.json"))?;
+        self.export_to_file(&folder.join("notes_mj-export.json"))?;
 
         let src = self.cfg.attachments_dir();
         if let Ok(entries) = std::fs::read_dir(&src) {
@@ -279,7 +287,7 @@ impl Store {
                  \"format\" o hodnotě \"{FORMAT}\"."
             ))
         })?;
-        if doc.format != FORMAT {
+        if doc.format != FORMAT && doc.format != LEGACY_FORMAT {
             return Err(AppError::Validation(format!(
                 "tento soubor se hlásí jako '{}', ne jako export z Notes_MJ",
                 doc.format

@@ -718,7 +718,7 @@ fn notes_occasions_and_gifts_survive_an_export_round_trip() {
 fn a_version_one_export_still_imports() {
     // Exactly what the previous build wrote: no notes, occasions or gifts.
     let old = serde_json::json!({
-        "format": "t3.export",
+        "format": "notes_mj.export",
         "version": 1,
         "exported_at": "2026-09-07T00:00:00.000Z",
         "app_version": "1.0.0",
@@ -785,7 +785,7 @@ fn an_import_refuses_a_hostile_url_even_from_a_hand_edited_file() {
 #[test]
 fn a_gift_whose_occasion_is_missing_is_reported_not_silently_dropped() {
     let orphan = serde_json::json!({
-        "format": "t3.export",
+        "format": "notes_mj.export",
         "version": 2,
         "exported_at": "2026-09-07T00:00:00.000Z",
         "app_version": "1.0.0",

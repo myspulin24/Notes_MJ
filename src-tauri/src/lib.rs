@@ -46,7 +46,7 @@ pub fn run() {
             eprintln!("Notes_MJ se nepodařilo otevřít databázi: {e}");
             rfd_fallback(&format!(
                 "Notes_MJ se nepodařilo otevřít databázi.\n\n{e}\n\nZkontrolujte, že složka existuje a lze do ní zapisovat, \
-                 nebo v souboru .env nastavte T3_DATA_DIR na jiné umístění."
+                 nebo v souboru .env nastavte NOTES_MJ_DATA_DIR na jiné umístění."
             ));
             std::process::exit(1);
         }
@@ -117,6 +117,7 @@ pub fn run() {
             commands::backup_now,
             commands::list_backups,
             commands::health,
+            commands::restart_app,
             // dashboard, calendar, notebook, occasions, gifts, settings
             commands_planner::dashboard,
             commands_planner::calendar_range,

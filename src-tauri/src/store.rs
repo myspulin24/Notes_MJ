@@ -1321,7 +1321,7 @@ impl Store {
         let limit = self.settings()?.effective_max_attachment_bytes(&self.cfg);
         if meta.len() > limit {
             return Err(AppError::Validation(format!(
-                "soubor má {:.1} MB - limit je {} MB (zvyšte T3_MAX_ATTACHMENT_MB v .env)",
+                "soubor má {:.1} MB - limit je {} MB (zvyšte NOTES_MJ_MAX_ATTACHMENT_MB v .env)",
                 meta.len() as f64 / 1_048_576.0,
                 limit / 1_048_576
             )));
@@ -1426,7 +1426,7 @@ impl Store {
                 continue;
             }
             let name = entry.file_name().to_string_lossy().to_string();
-            if is_t3_stored_name(&name)
+            if is_stored_attachment_name(&name)
                 && !known.contains(&name)
                 && std::fs::remove_file(entry.path()).is_ok()
             {
@@ -1570,7 +1570,7 @@ fn default_tag_color(name: &str) -> &'static str {
 
 /// Whether a file name has the shape Notes_MJ gives its stored attachments:
 /// eight lowercase hex characters, a hyphen, then the sanitised name.
-fn is_t3_stored_name(name: &str) -> bool {
+fn is_stored_attachment_name(name: &str) -> bool {
     let bytes = name.as_bytes();
     bytes.len() > 9
         && bytes[8] == b'-'

@@ -68,6 +68,18 @@ const DASHBOARD_CARDS: { id: string; label: string }[] = [
   { id: 'inbox', label: 'Doručené' },
 ];
 
+/**
+ * The database's file name as it is on disk right now.
+ *
+ * Read off the real path rather than written out here, because the name has
+ * changed once already: telling someone to rename their backup over a file
+ * that is not what their copy actually uses is worse than saying nothing.
+ */
+function databaseFileName(dbPath: string | undefined): string {
+  const name = (dbPath ?? '').split(/[\\/]/).pop();
+  return name && name.length > 0 ? name : 'notes_mj.db';
+}
+
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const {
     boot,
@@ -120,7 +132,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const exportJson = async () => {
     const path = await pickSavePath({
       title: 'Export vašich úkolů',
-      defaultPath: `t3-export-${localToday()}.json`,
+      defaultPath: `notes_mj-export-${localToday()}.json`,
       filters: [{ name: 'JSON', extensions: ['json'] }],
     });
     if (!path) return;
@@ -642,7 +654,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                           </dd>
                           <dt>Databáze</dt>
                           <dd>
-                            <code>t3.db</code> · {formatBytes(health?.db_size_bytes ?? 0)}
+                            <code>{databaseFileName(health?.db_path)}</code> ·{' '}
+                            {formatBytes(health?.db_size_bytes ?? 0)}
                           </dd>
                           <dt>Přílohy</dt>
                           <dd>
@@ -750,9 +763,10 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
                       <Section title="Automatické zálohy">
                         <p className="muted">
-                          Notes_MJ zkopíruje celou databázi do <code>backups\</code> při startu
+                          Notes_MJ zkopíruje celou databázi do <code>backups</code> při startu
                           a před každou destruktivní akcí. Obnovíte ji tak, že aplikaci zavřete
-                          a soubor zálohy přejmenujete na <code>t3.db</code>.
+                          a soubor zálohy přejmenujete na{' '}
+                          <code>{databaseFileName(health?.db_path)}</code>.
                         </p>
                         <Toggle
                           label="Zálohovat při spuštění"

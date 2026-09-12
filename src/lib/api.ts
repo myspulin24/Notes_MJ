@@ -193,6 +193,15 @@ export const api = {
   backupNow: () => call<BackupInfo>('backup_now'),
   listBackups: () => call<BackupInfo[]>('list_backups'),
   health: () => call<Health>('health'),
+
+  /**
+   * Quits and reopens the app to finish an update.
+   *
+   * Never resolves when it works - the process is gone before a reply can come
+   * back - so callers must treat a rejection as the only outcome worth acting
+   * on, not wait for success.
+   */
+  restartApp: () => call<void>('restart_app'),
 };
 
 // -- optional platform APIs ---------------------------------------------------

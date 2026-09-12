@@ -92,8 +92,9 @@ if (existsSync(envPath)) {
 
 // 3. Data directory ----------------------------------------------------------
 step(3, 'Připravuji složku s daty');
-const dataDir = process.env.T3_DATA_DIR && process.env.T3_DATA_DIR.trim()
-  ? resolve(process.env.T3_DATA_DIR.trim())
+const configuredDataDir = process.env.NOTES_MJ_DATA_DIR ?? process.env.T3_DATA_DIR;
+const dataDir = configuredDataDir && configuredDataDir.trim()
+  ? resolve(configuredDataDir.trim())
   : join(homedir(), '.notes_mj', 'userdata');
 for (const d of [dataDir, join(dataDir, 'attachments'), join(dataDir, 'backups')]) {
   mkdirSync(d, { recursive: true });

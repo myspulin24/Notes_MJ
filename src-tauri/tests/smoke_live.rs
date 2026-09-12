@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use chrono::NaiveDate;
 use notes_mj_lib::db::Store;
-use notes_mj_lib::paths::Config;
+use notes_mj_lib::paths::{Config, DB_FILE, LEGACY_DB_FILE};
 use notes_mj_lib::planner::OccasionKind;
 
 fn live_database() -> Option<PathBuf> {
@@ -18,8 +18,17 @@ fn live_database() -> Option<PathBuf> {
     let home = std::env::var("USERPROFILE")
         .or_else(|_| std::env::var("HOME"))
         .ok()?;
-    let path = PathBuf::from(home).join(".t3").join("userdata").join("t3.db");
-    path.exists().then_some(path)
+    // Four combinations are possible on a real machine, because the folder and
+    // the file were renamed at different times. Whichever exists is the one
+    // worth testing against.
+    let home = PathBuf::from(home);
+    [".notes_mj", ".t3"]
+        .into_iter()
+        .flat_map(|dir| {
+            let userdata = home.join(dir).join("userdata");
+            [DB_FILE, LEGACY_DB_FILE].map(move |file| userdata.join(file))
+        })
+        .find(|path| path.exists())
 }
 
 #[test]
@@ -30,7 +39,7 @@ fn a_migrated_database_supports_the_new_features() {
     };
 
     let dir = tempfile::tempdir().unwrap();
-    std::fs::copy(&live, dir.path().join("t3.db")).unwrap();
+    std::fs::copy(&live, dir.path().join(DB_FILE)).unwrap();
 
     let mut store = Store::open(Config {
         data_dir: dir.path().to_path_buf(),
@@ -99,7 +108,7 @@ fn an_older_settings_blob_gains_the_notification_switches() {
     };
 
     let dir = tempfile::tempdir().unwrap();
-    std::fs::copy(&live, dir.path().join("t3.db")).unwrap();
+    std::fs::copy(&live, dir.path().join(DB_FILE)).unwrap();
 
     let store = Store::open(Config {
         data_dir: dir.path().to_path_buf(),

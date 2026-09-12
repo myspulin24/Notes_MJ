@@ -2,7 +2,7 @@
 
 Osobní plánovač v duchu Things 3: úkoly, kalendář, interaktivní přehled,
 zápisník a plánovač dárků na Vánoce či narozeniny. Desktopová aplikace pro
-Windows 11, kompletně v češtině. Data zůstávají v počítači.
+Windows 11 a macOS 11+, kompletně v češtině. Data zůstávají v počítači.
 
 **Autor:** Michal Jašek · **© 2026**
 
@@ -35,11 +35,17 @@ Podrobně v [Aktualizace](#aktualizace).
 
 ## Rychlý start
 
-Potřebujete [Node.js 18+](https://nodejs.org), [Rust](https://rustup.rs)
-a na Windows komponentu **Desktop development with C++** z Visual Studio
-Build Tools. Pak stačí **jeden příkaz**:
+Potřebujete [Node.js 18+](https://nodejs.org) a [Rust](https://rustup.rs),
+k tomu podle systému:
 
-```powershell
+| | |
+|---|---|
+| Windows | komponentu **Desktop development with C++** z Visual Studio Build Tools |
+| macOS | Command Line Tools (`xcode-select --install`) |
+
+Pak stačí **jeden příkaz**:
+
+```bash
 npm run first-run
 ```
 
@@ -51,14 +57,25 @@ Další spuštění během vývoje: `npm run app`.
 
 ### Instalační balíček
 
-```powershell
+```bash
 npm run app:build
 ```
 
-Vytvoří instalátor `Notes_MJ_<verze>_x64-setup.exe` v
-`src-tauri\target\release\bundle\nsis\`. Instaluje se pro aktuálního uživatele,
-bez práv správce. Nainstalovaná aplikace už Node ani Rust nepotřebuje a umí se
-sama aktualizovat.
+Na **Windows** vznikne instalátor `Notes_MJ_<verze>_x64-setup.exe`
+v `src-tauri\target\release\bundle\nsis\`. Instaluje se pro aktuálního
+uživatele, bez práv správce.
+
+Na **macOS** vzniknou `Notes_MJ.app` a `Notes_MJ_<verze>_universal.dmg`
+v `src-tauri/target/release/bundle/`. Universal binárka běží na Apple Silicon
+i na Intelu.
+
+> Balíčky pro macOS nejsou notarizované u Applu. Stažený `.dmg` proto při
+> prvním spuštění zastaví Gatekeeper — otevřete aplikaci pravým tlačítkem
+> → **Otevřít**. Aktualizace se ověřují vlastním podpisem, ten s notarizací
+> nesouvisí a funguje.
+
+Nainstalovaná aplikace už Node ani Rust nepotřebuje a umí se sama
+aktualizovat.
 
 ---
 
@@ -378,34 +395,48 @@ jako repository secret, v kódu nikde není.
 
 ## Kde jsou vaše data
 
-Výchozí umístění je `%USERPROFILE%\.notes_mj\userdata`, tedy obvykle
-`C:\Users\<vy>\.notes_mj\userdata`. Změnit ho lze proměnnou `T3_DATA_DIR`
-v `.env`.
+Výchozí umístění:
 
-> **Přejmenování z T3.** Kdo aplikaci používal pod původním názvem, má data
-> ve složce `.t3\userdata`. Notes_MJ ji používá dál — pokud v ní najde
-> databázi a v nové složce žádná není, otevře tu starou. Nemusíte nic
-> přesouvat a o nic nepřijdete. Nová instalace na čistém počítači rovnou
-> použije `.notes_mj`.
+| | |
+|---|---|
+| Windows | `%USERPROFILE%\.notes_mj\userdata` |
+| macOS | `~/.notes_mj/userdata` |
+
+Změnit ho lze proměnnou `NOTES_MJ_DATA_DIR` v `.env`.
+
+> **Přejmenování z T3.** Aplikace se dřív jmenovala jinak a obojí, co po tom
+> názvu zbylo, se pořád respektuje — nemusíte nic přesouvat a o nic
+> nepřijdete.
 >
-> Soubor databáze se dál jmenuje `t3.db`, aby existující zálohy a postup
-> obnovy níže zůstaly platné.
+> *Složka.* Kdo má data v `.t3/userdata` a v nové složce žádná nejsou, tomu
+> Notes_MJ otevře tu starou. Čistá instalace rovnou použije `.notes_mj`.
+>
+> *Soubor databáze.* Dřív se jmenoval `t3.db`. Při prvním spuštění novější
+> verze se přejmenuje na `notes_mj.db` i s `-wal` a `-shm`. Přejmenování
+> proběhne jen tehdy, když nový název ještě není obsazený, takže se nemá jak
+> stát dvakrát ani zůstat v půlce.
+>
+> *Proměnné v `.env`.* Starý zápis `T3_*` funguje dál. Nový `NOTES_MJ_*` má
+> přednost, když jsou nastavené oba.
+>
+> *Zálohy.* Nové se jmenují `notes_mj-*.db`, starší `t3-*.db` se dál vypisují
+> a dají se obnovit.
 
 > Oprávnění pro otevírání složek (`src-tauri/capabilities/default.json`) je
-> záměrně omezené na výchozí cestu. Pokud si `T3_DATA_DIR` přesunete jinam,
-> aplikace bude fungovat normálně, jen tlačítka „Zobrazit v Průzkumníku“
+> záměrně omezené na výchozí cestu. Pokud si `NOTES_MJ_DATA_DIR` přesunete
+> jinam, aplikace bude fungovat normálně, jen tlačítka „Zobrazit ve složce“
 > mohou přestat reagovat. Cestu si pak rozšiřte v souboru s oprávněními.
 
 ```
-userdata\
-  t3.db            databáze SQLite - jediný zdroj pravdy
-  t3.db-wal        write-ahead log (dočasný)
-  attachments\     jeden soubor na přílohu
-  backups\         automatické zálohy, nejnovější poslední
+userdata/
+  notes_mj.db      databáze SQLite - jediný zdroj pravdy
+  notes_mj.db-wal  write-ahead log (dočasný)
+  attachments/     jeden soubor na přílohu
+  backups/         automatické zálohy, nejnovější poslední
 ```
 
-`t3.db` je běžná databáze SQLite. Otevřete ji čímkoli (DB Browser for SQLite,
-`sqlite3`, Python). Data jsou vaše.
+`notes_mj.db` je běžná databáze SQLite. Otevřete ji čímkoli (DB Browser for
+SQLite, `sqlite3`, Python). Data jsou vaše.
 
 Aktuální cestu, velikost databáze a výsledek kontroly integrity najdete
 v **Nastavení a data**.
@@ -413,9 +444,9 @@ v **Nastavení a data**.
 ### Zálohy
 
 Notes_MJ udělá kopii celé databáze při každém spuštění (nejvýše jednou za
-`T3_BACKUP_MIN_INTERVAL_MINUTES`) a vždy před destruktivní operací, například
-před importem v režimu „Nahradit vše“. Uchovává posledních
-`T3_BACKUP_KEEP` záloh.
+`NOTES_MJ_BACKUP_MIN_INTERVAL_MINUTES`) a vždy před destruktivní operací,
+například před importem v režimu „Nahradit vše“. Uchovává posledních
+`NOTES_MJ_BACKUP_KEEP` záloh.
 
 Zálohy se pořizují příkazem `VACUUM INTO`, takže výsledek je konzistentní
 i během zápisu a je to plnohodnotná databáze.
@@ -423,10 +454,14 @@ i během zápisu a je to plnohodnotná databáze.
 **Obnovení zálohy:**
 
 1. Zavřete Notes_MJ.
-2. Otevřete `%USERPROFILE%\.t3\userdata\backups\`.
-3. Zkopírujte vybraný soubor `t3-RRRRMMDD-HHMMSS.db` o složku výš.
-4. Smažte `t3.db`, `t3.db-wal` a `t3.db-shm`.
-5. Přejmenujte zkopírovaný soubor na `t3.db`.
+2. Otevřete složku `backups` v datové složce (cestu ukazuje **Nastavení
+   a data**; na Windows `%USERPROFILE%\.notes_mj\userdata\backups\`,
+   na macOS `~/.notes_mj/userdata/backups/`).
+3. Zkopírujte vybraný soubor `notes_mj-RRRRMMDD-HHMMSS.db` o složku výš.
+   Zálohy pořízené před přejmenováním se jmenují `t3-RRRRMMDD-HHMMSS.db`
+   a fungují stejně.
+4. Smažte `notes_mj.db`, `notes_mj.db-wal` a `notes_mj.db-shm`.
+5. Přejmenujte zkopírovaný soubor na `notes_mj.db`.
 6. Spusťte Notes_MJ.
 
 Ruční zálohu vyvoláte tlačítkem **Zálohovat teď** v Nastavení.
@@ -479,7 +514,7 @@ udělá zálohu, pak vše smaže a nahraje soubor — a i tak je to jediné `Ctr
 │  ─ paths.rs      cesty a bezpečné názvy      │
 └───────────────────┬──────────────────────────┘
                     │
-              SQLite (t3.db)
+              SQLite (notes_mj.db)
 ```
 
 Několik rozhodnutí, která stojí za vysvětlení:
@@ -663,7 +698,7 @@ Ne kvůli času, ale proto, že by to změnilo, co Notes_MJ je:
 ## Struktura projektu
 
 ```
-t3/
+notes_mj/
 ├─ src/                    frontend
 │  ├─ App.tsx              layout, routování, klávesové zkratky
 │  ├─ components/          UI (seznamy, kalendář, přehled, zápisník, dárky)
@@ -695,11 +730,14 @@ Vše volitelné, vše má rozumnou výchozí hodnotu. Viz [`.env.example`](.env.
 
 | Proměnná | Výchozí | Význam |
 |---|---|---|
-| `T3_DATA_DIR` | `%USERPROFILE%\.t3\userdata` | kde leží data |
-| `T3_BACKUP_KEEP` | `20` | kolik záloh uchovat |
-| `T3_BACKUP_MIN_INTERVAL_MINUTES` | `60` | minimální rozestup záloh |
-| `T3_MAX_ATTACHMENT_MB` | `64` | limit velikosti přílohy |
-| `T3_DEBUG` | `0` | podrobnější výpisy |
+| `NOTES_MJ_DATA_DIR` | `~/.notes_mj/userdata` | kde leží data |
+| `NOTES_MJ_BACKUP_KEEP` | `20` | kolik záloh uchovat |
+| `NOTES_MJ_BACKUP_MIN_INTERVAL_MINUTES` | `60` | minimální rozestup záloh |
+| `NOTES_MJ_MAX_ATTACHMENT_MB` | `64` | limit velikosti přílohy |
+| `NOTES_MJ_DEBUG` | `0` | podrobnější výpisy |
+
+Dřívější názvy s předponou `T3_` se čtou dál, aby staré `.env` nepřestalo
+platit. Když jsou nastavené oba, vyhrává `NOTES_MJ_`.
 
 `.env` je v `.gitignore` a nikdy se nekomituje. Notes_MJ nepotřebuje žádné
 přihlašovací údaje; soubor existuje proto, aby případné budoucí tajemství

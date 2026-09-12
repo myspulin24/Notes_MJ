@@ -8,8 +8,9 @@
 //! Settings are deliberately **not** on the undo stack. Ctrl+Z after ticking a
 //! task off should not also flip your theme back.
 //!
-//! Three of these knobs also exist in `.env` (`T3_BACKUP_KEEP`,
-//! `T3_BACKUP_MIN_INTERVAL_MINUTES`, `T3_MAX_ATTACHMENT_MB`). The `.env` value
+//! Three of these knobs also exist in `.env` (`NOTES_MJ_BACKUP_KEEP`,
+//! `NOTES_MJ_BACKUP_MIN_INTERVAL_MINUTES`,
+//! `NOTES_MJ_MAX_ATTACHMENT_MB`). The `.env` value
 //! is the *default*; if the user sets it in the UI, the UI wins. That way
 //! there is one obvious place to change it without taking away the ability to
 //! preseed a machine from a file.

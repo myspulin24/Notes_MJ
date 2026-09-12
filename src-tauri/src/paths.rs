@@ -5,12 +5,16 @@
 //!
 //! ```text
 //! userdata/
-//!   t3.db              SQLite database - the single source of truth
-//!   t3.db-wal          write-ahead log (transient)
+//!   notes_mj.db        SQLite database - the single source of truth
+//!   notes_mj.db-wal    write-ahead log (transient)
 //!   attachments/       one file per attachment, content-addressed prefix
 //!   backups/           automatic snapshots, newest last
-//!   the database file keeps its original name for backwards compatibility
 //! ```
+//!
+//! Both the folder and the database file carry an older name from before the
+//! app was renamed. Neither is dropped: the folder is still read when it is
+//! the only one with data in it, and the database file is renamed in place the
+//! first time a new build opens it.
 
 use std::path::{Path, PathBuf};
 
@@ -35,17 +39,17 @@ impl Config {
         // `.env` is optional by design: Notes_MJ needs no credentials to run.
         let _ = dotenvy::dotenv();
 
-        let data_dir = match std::env::var("T3_DATA_DIR") {
-            Ok(v) if !v.trim().is_empty() => PathBuf::from(v.trim()),
-            _ => default_data_dir(),
+        let data_dir = match env_var("DATA_DIR") {
+            Some(v) => PathBuf::from(v.trim()),
+            None => default_data_dir(),
         };
 
         Config {
             data_dir,
-            backup_keep: env_num("T3_BACKUP_KEEP", 20).clamp(1, 1000) as usize,
-            backup_min_interval_minutes: env_num("T3_BACKUP_MIN_INTERVAL_MINUTES", 60).clamp(0, 60 * 24 * 30),
-            max_attachment_bytes: env_num("T3_MAX_ATTACHMENT_MB", 64).clamp(1, 4096) as u64 * 1024 * 1024,
-            debug: matches!(std::env::var("T3_DEBUG").as_deref(), Ok("1") | Ok("true")),
+            backup_keep: env_num("BACKUP_KEEP", 20).clamp(1, 1000) as usize,
+            backup_min_interval_minutes: env_num("BACKUP_MIN_INTERVAL_MINUTES", 60).clamp(0, 60 * 24 * 30),
+            max_attachment_bytes: env_num("MAX_ATTACHMENT_MB", 64).clamp(1, 4096) as u64 * 1024 * 1024,
+            debug: matches!(env_var("DEBUG").as_deref(), Some("1") | Some("true")),
         }
     }
 
@@ -66,13 +70,33 @@ impl Config {
                 AppError::Io(format!("nepodařilo se vytvořit {}: {e}", dir.display()))
             })?;
         }
+        adopt_legacy_db(&self.data_dir)?;
         Ok(())
     }
 }
 
-fn env_num(key: &str, default: i64) -> i64 {
-    std::env::var(key)
-        .ok()
+/// The prefix these settings carry now, and the one they carried before.
+const ENV_PREFIX: &str = "NOTES_MJ_";
+const LEGACY_ENV_PREFIX: &str = "T3_";
+
+/// Reads one setting from the environment, preferring the current name.
+///
+/// An `.env` written before the rename still says `T3_...`, and silently
+/// ignoring it would move someone's data directory without a word. So the old
+/// name keeps working; it only loses when both are set.
+fn env_var(suffix: &str) -> Option<String> {
+    for prefix in [ENV_PREFIX, LEGACY_ENV_PREFIX] {
+        if let Ok(value) = std::env::var(format!("{prefix}{suffix}")) {
+            if !value.trim().is_empty() {
+                return Some(value);
+            }
+        }
+    }
+    None
+}
+
+fn env_num(suffix: &str, default: i64) -> i64 {
+    env_var(suffix)
         .and_then(|v| v.trim().parse::<i64>().ok())
         .unwrap_or(default)
 }
@@ -80,7 +104,10 @@ fn env_num(key: &str, default: i64) -> i64 {
 /// The folder the app used before it was renamed to Notes_MJ.
 const LEGACY_DIR: &str = ".t3";
 const DATA_DIR: &str = ".notes_mj";
-pub const DB_FILE: &str = "t3.db";
+pub const DB_FILE: &str = "notes_mj.db";
+
+/// What the database was called before the rename.
+pub const LEGACY_DB_FILE: &str = "t3.db";
 
 fn default_data_dir() -> PathBuf {
     let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
@@ -99,10 +126,47 @@ fn resolve_data_dir(home: &Path) -> PathBuf {
     let current = home.join(DATA_DIR).join("userdata");
     let legacy = home.join(LEGACY_DIR).join("userdata");
 
-    if !current.join(DB_FILE).exists() && legacy.join(DB_FILE).exists() {
+    if !has_database(&current) && has_database(&legacy) {
         return legacy;
     }
     current
+}
+
+/// Whether a folder already holds a database under either name.
+///
+/// Checking only the current name would send someone who upgraded straight
+/// past their own data into a fresh, empty database.
+fn has_database(dir: &Path) -> bool {
+    dir.join(DB_FILE).exists() || dir.join(LEGACY_DB_FILE).exists()
+}
+
+/// Renames a pre-rename database to the current name, once.
+///
+/// Only ever moves into a name that is free, so running it twice does nothing
+/// and an interrupted run leaves the old database readable rather than half
+/// renamed. The `-wal` and `-shm` files travel with it, and the main file goes
+/// last: a write-ahead log left behind under the old name is one SQLite would
+/// never look at, quietly dropping whatever had not been checkpointed yet.
+fn adopt_legacy_db(dir: &Path) -> Result<()> {
+    if dir.join(DB_FILE).exists() || !dir.join(LEGACY_DB_FILE).exists() {
+        return Ok(());
+    }
+
+    for suffix in ["-wal", "-shm", ""] {
+        let from = dir.join(format!("{LEGACY_DB_FILE}{suffix}"));
+        if !from.exists() {
+            continue;
+        }
+        let to = dir.join(format!("{DB_FILE}{suffix}"));
+        std::fs::rename(&from, &to).map_err(|e| {
+            AppError::Io(format!(
+                "nepodařilo se přejmenovat {} na {}: {e}",
+                from.display(),
+                to.display()
+            ))
+        })?;
+    }
+    Ok(())
 }
 
 /// Characters Windows forbids in a file name, plus the path separators.
@@ -298,9 +362,9 @@ mod data_dir_tests {
         // The upgrade path: someone who used the app before it was renamed
         // must not open it to an empty list.
         let home = tempfile::tempdir().unwrap();
-        let legacy = home.path().join(".t3").join("userdata");
+        let legacy = home.path().join(LEGACY_DIR).join("userdata");
         std::fs::create_dir_all(&legacy).unwrap();
-        std::fs::write(legacy.join("t3.db"), b"pretend").unwrap();
+        std::fs::write(legacy.join(LEGACY_DB_FILE), b"pretend").unwrap();
 
         assert_eq!(resolve_data_dir(home.path()), legacy);
     }
@@ -308,10 +372,10 @@ mod data_dir_tests {
     #[test]
     fn the_new_folder_wins_once_it_has_a_database_of_its_own() {
         let home = tempfile::tempdir().unwrap();
-        for dir in [".t3", ".notes_mj"] {
+        for dir in [LEGACY_DIR, DATA_DIR] {
             let path = home.path().join(dir).join("userdata");
             std::fs::create_dir_all(&path).unwrap();
-            std::fs::write(path.join("t3.db"), b"pretend").unwrap();
+            std::fs::write(path.join(LEGACY_DB_FILE), b"pretend").unwrap();
         }
         assert_eq!(
             resolve_data_dir(home.path()),
@@ -323,10 +387,77 @@ mod data_dir_tests {
     fn an_empty_old_folder_does_not_win() {
         // A leftover directory with no database in it is not data.
         let home = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(home.path().join(".t3").join("userdata")).unwrap();
+        std::fs::create_dir_all(home.path().join(LEGACY_DIR).join("userdata")).unwrap();
         assert_eq!(
             resolve_data_dir(home.path()),
             home.path().join(".notes_mj").join("userdata")
         );
+    }
+
+    #[test]
+    fn a_database_under_the_old_name_is_renamed_with_its_log() {
+        let dir = tempfile::tempdir().unwrap();
+        for suffix in ["", "-wal", "-shm"] {
+            std::fs::write(
+                dir.path().join(format!("{LEGACY_DB_FILE}{suffix}")),
+                suffix.as_bytes(),
+            )
+            .unwrap();
+        }
+
+        adopt_legacy_db(dir.path()).unwrap();
+
+        for suffix in ["", "-wal", "-shm"] {
+            let moved = dir.path().join(format!("{DB_FILE}{suffix}"));
+            assert!(moved.exists(), "{suffix} nepřejmenováno");
+            assert_eq!(std::fs::read(moved).unwrap(), suffix.as_bytes());
+            assert!(!dir
+                .path()
+                .join(format!("{LEGACY_DB_FILE}{suffix}"))
+                .exists());
+        }
+    }
+
+    #[test]
+    fn a_database_without_a_log_renames_just_as_well() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join(LEGACY_DB_FILE), b"data").unwrap();
+
+        adopt_legacy_db(dir.path()).unwrap();
+
+        assert!(dir.path().join(DB_FILE).exists());
+        assert!(!dir.path().join(LEGACY_DB_FILE).exists());
+    }
+
+    #[test]
+    fn a_current_database_is_never_overwritten_by_an_old_one() {
+        // Both names present means the rename already happened and something
+        // left the old file behind. Clobbering the live database with it would
+        // be the worst possible reading of that.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join(DB_FILE), b"live").unwrap();
+        std::fs::write(dir.path().join(LEGACY_DB_FILE), b"stale").unwrap();
+
+        adopt_legacy_db(dir.path()).unwrap();
+
+        assert_eq!(std::fs::read(dir.path().join(DB_FILE)).unwrap(), b"live");
+    }
+
+    #[test]
+    fn running_the_rename_on_a_fresh_folder_does_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        adopt_legacy_db(dir.path()).unwrap();
+        assert!(!dir.path().join(DB_FILE).exists());
+    }
+
+    #[test]
+    fn the_old_folder_is_still_found_by_its_new_database_name() {
+        // Someone who upgraded once already: old folder, new file name.
+        let home = tempfile::tempdir().unwrap();
+        let legacy = home.path().join(LEGACY_DIR).join("userdata");
+        std::fs::create_dir_all(&legacy).unwrap();
+        std::fs::write(legacy.join(DB_FILE), b"pretend").unwrap();
+
+        assert_eq!(resolve_data_dir(home.path()), legacy);
     }
 }

@@ -22,7 +22,7 @@ importer, a twenty-line script. Nothing about it is proprietary.
 
 ```jsonc
 {
-  "format": "t3.export",   // always this string; the import refuses anything else
+  "format": "notes_mj.export",  // the import also accepts the older "t3.export"
   "version": 2,            // an importer must refuse a version it does not know
   "exported_at": "2026-09-07T08:15:30.000Z",
   "app_version": "1.0.0",
@@ -117,7 +117,7 @@ are denormalised onto the task so that one array is enough.
 **Attachment bytes are not embedded.** The JSON records the metadata only.
 To move attachments along with the JSON, either use
 **Settings → Export everything**, which writes a folder containing
-`t3-export.json` and a copy of `attachments\`, or copy the `attachments`
+`notes_mj-export.json` and a copy of `attachments/`, or copy the `attachments`
 folder from your data directory by hand.
 
 ### `tasks[].recurrence_rule`
@@ -203,7 +203,7 @@ fails, nothing changes.
 
 The importer refuses, with a message and no changes:
 
-* a file whose `format` is not `t3.export`;
+* a file whose `format` is neither `notes_mj.export` nor the older `t3.export`;
 * a `version` higher than this build understands;
 * anything that is not valid JSON;
 * a file larger than 256 MB.
@@ -213,16 +213,16 @@ The importer refuses, with a message and no changes:
 ```bash
 # every open task with a deadline, oldest first
 jq -r '.tasks[] | select(.status=="open" and .due_on!=null)
-       | [.due_on, .title] | @tsv' t3-export.json | sort
+       | [.due_on, .title] | @tsv' notes_mj-export.json | sort
 
 # what got done last month
 jq -r '.tasks[] | select(.completed_at? // "" | startswith("2026-08"))
-       | .title' t3-export.json
+       | .title' notes_mj-export.json
 
 # how many tasks per project
 jq -r '[.projects[] | {(.id): .name}] | add as $p
        | .tasks | group_by(.project_id)[]
-       | "\(.length)\t\($p[.[0].project_id] // "(no project)")"' t3-export.json
+       | "\(.length)\t\($p[.[0].project_id] // "(no project)")"' notes_mj-export.json
 ```
 
 ---
@@ -300,11 +300,11 @@ archive group by `completed_on`. It is `null` for anything still open.
 
 ```bash
 # what is still to buy this Christmas, and what it will cost
-jq -r '.occasions[] | select(.kind=="christmas") | .id' t3-export.json |
+jq -r '.occasions[] | select(.kind=="christmas") | .id' notes_mj-export.json |
 while read -r id; do
   jq -r --arg id "$id" '.gifts[]
     | select(.occasion_id==$id and (.status=="idea" or .status=="decided"))
-    | [.recipient, .title, (.price_minor // 0) / 100] | @tsv' t3-export.json
+    | [.recipient, .title, (.price_minor // 0) / 100] | @tsv' notes_mj-export.json
 done
 
 # total already spent per occasion
@@ -312,5 +312,5 @@ jq -r '[.occasions[] | {(.id): .name}] | add as $o
   | .gifts
   | map(select(.status=="bought" or .status=="wrapped" or .status=="given"))
   | group_by(.occasion_id)[]
-  | "\($o[.[0].occasion_id])\t\((map(.price_minor // 0) | add) / 100)"' t3-export.json
+  | "\($o[.[0].occasion_id])\t\((map(.price_minor // 0) | add) / 100)"' notes_mj-export.json
 ```

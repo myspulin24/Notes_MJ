@@ -12,7 +12,7 @@
  * compromised release page cannot turn into a compromised machine.
  */
 
-import { isDesktop, toAppError } from './api';
+import { api, isDesktop, toAppError } from './api';
 import type { AppError } from './types';
 
 /** What the updater knows about a version waiting to be installed. */
@@ -243,12 +243,15 @@ export async function downloadUpdate(
 }
 
 /**
- * Runs the staged installer, which closes the app and reopens the new version.
+ * Puts the staged update in place and reopens the app on the new version.
  *
- * On Windows `install` hands over to the NSIS installer and exits this process,
- * so anything written after the await will not run. That is fine: every command
- * commits its own SQLite transaction as it goes, so there is nothing waiting to
- * be flushed. It only returns at all when the handover failed.
+ * The two halves behave differently per platform and both have to be handled.
+ * On Windows `install` hands over to the NSIS installer and this process ends
+ * mid-await, so nothing below runs - which is safe, because every command
+ * commits its own SQLite transaction as it goes and nothing is left unflushed.
+ * On macOS and Linux `install` only swaps the bundle on disk and returns; this
+ * process carries on running the old build, so it has to bow out itself or the
+ * user is left looking at a Restart button that changed nothing.
  */
 export async function installUpdate(): Promise<AppError | null> {
   if (!pending) {
@@ -260,6 +263,14 @@ export async function installUpdate(): Promise<AppError | null> {
   }
   try {
     await pending.install();
+  } catch (error) {
+    return toAppError(error);
+  }
+
+  // Reached only where `install` came back, so the swap is done and this is
+  // the outgoing build asking to be replaced.
+  try {
+    await api.restartApp();
     return null;
   } catch (error) {
     return toAppError(error);

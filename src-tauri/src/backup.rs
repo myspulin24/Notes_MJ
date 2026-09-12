@@ -3,10 +3,11 @@
 //! A backup is a whole, self-contained copy of the SQLite file produced with
 //! `VACUUM INTO`. That runs inside SQLite, so it is consistent even while the
 //! app is writing, and the result is a compact database you can open with any
-//! SQLite tool - or just rename over `t3.db` to restore.
+//! SQLite tool - or just rename over `notes_mj.db` to restore.
 //!
 //! One is taken at startup and after imports, throttled by
-//! `T3_BACKUP_MIN_INTERVAL_MINUTES`, keeping the newest `T3_BACKUP_KEEP`.
+//! `NOTES_MJ_BACKUP_MIN_INTERVAL_MINUTES`, keeping the newest
+//! `NOTES_MJ_BACKUP_KEEP`.
 
 use std::path::PathBuf;
 
@@ -16,6 +17,10 @@ use serde::Serialize;
 use crate::db::Store;
 use crate::error::{AppError, Result};
 use crate::models::{fmt_ts, parse_ts};
+
+/// What a backup file is called, and what it was called before the rename.
+const BACKUP_PREFIX: &str = "notes_mj-";
+const LEGACY_BACKUP_PREFIX: &str = "t3-";
 
 const LAST_BACKUP_KEY: &str = "last_backup_at";
 
@@ -74,7 +79,7 @@ impl Store {
             .map_err(|e| AppError::Io(format!("nelze vytvořit složku se zálohami: {e}")))?;
 
         let stamp = Utc::now().format("%Y%m%d-%H%M%S").to_string();
-        let file_name = format!("t3-{stamp}.db");
+        let file_name = format!("{BACKUP_PREFIX}{stamp}.db");
         let dest = dir.join(&file_name);
 
         // An in-memory database (the test suite) has nothing to vacuum out.
@@ -155,7 +160,12 @@ impl Store {
             .flatten()
             .filter(|e| {
                 let name = e.file_name().to_string_lossy().to_string();
-                name.starts_with("t3-") && name.ends_with(".db")
+                // Backups taken before the rename still belong to the user,
+                // so both prefixes count as ours. Dropping the old one would
+                // not delete anything - it would just stop showing it, which
+                // is worse: the file sits there looking like nothing.
+                (name.starts_with(BACKUP_PREFIX) || name.starts_with(LEGACY_BACKUP_PREFIX))
+                    && name.ends_with(".db")
             })
             .map(|e| {
                 let meta = e.metadata().ok();
@@ -193,7 +203,7 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use crate::db::Store;
-    use crate::paths::Config;
+    use crate::paths::{Config, DB_FILE};
 
     fn cfg(dir: &std::path::Path, keep: usize, interval: i64) -> Config {
         Config {
@@ -226,13 +236,50 @@ mod tests {
     }
 
     #[test]
+    fn backups_from_before_the_rename_are_still_listed() {
+        // Renaming the prefix cannot make older snapshots disappear from the
+        // list. They are the only copies of data from before the upgrade, and
+        // a restore instruction pointing at a file the app refuses to show is
+        // no instruction at all.
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::open(cfg(dir.path(), 5, 0)).unwrap();
+
+        let backups = dir.path().join("backups");
+        std::fs::create_dir_all(&backups).unwrap();
+        std::fs::write(backups.join("t3-20250101-000000.db"), b"old").unwrap();
+        std::fs::write(backups.join("notes_mj-20260101-000000.db"), b"new").unwrap();
+        // Something that is not ours at all must stay out of the list.
+        std::fs::write(backups.join("holiday-photos.db"), b"nope").unwrap();
+
+        let listed: Vec<String> = store
+            .list_backups()
+            .unwrap()
+            .into_iter()
+            .map(|b| b.file_name)
+            .collect();
+
+        assert!(
+            listed.iter().any(|n| n == "t3-20250101-000000.db"),
+            "stará záloha zmizela z výpisu: {listed:?}"
+        );
+        assert!(
+            listed.iter().any(|n| n == "notes_mj-20260101-000000.db"),
+            "nová záloha chybí: {listed:?}"
+        );
+        assert!(
+            !listed.iter().any(|n| n == "holiday-photos.db"),
+            "cizí soubor se dostal do výpisu: {listed:?}"
+        );
+    }
+
+    #[test]
     fn upgrading_an_existing_database_copies_it_aside_first() {
         let dir = tempfile::tempdir().unwrap();
         {
             let mut store = Store::open(cfg(dir.path(), 5, 0)).unwrap();
             store.create_area("Domácnost").unwrap();
         }
-        pretend_database_is_older(&dir.path().join("t3.db"));
+        pretend_database_is_older(&dir.path().join(DB_FILE));
 
         // Re-opening now runs the v1 -> v2 migration.
         let store = Store::open(cfg(dir.path(), 5, 0)).unwrap();
@@ -268,7 +315,7 @@ mod tests {
             let mut store = Store::open(cfg(dir.path(), 5, 0)).unwrap();
             store.create_area("Domácnost").unwrap();
         }
-        pretend_database_is_older(&dir.path().join("t3.db"));
+        pretend_database_is_older(&dir.path().join(DB_FILE));
 
         // keep = 1, then take several ordinary backups: the rotation must not
         // reach the migration copy.

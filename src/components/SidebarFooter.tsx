@@ -60,6 +60,16 @@ export function SidebarFooter() {
   const live = updateStatusLine(updateStage, updateInfo?.version ?? null, updateProgress.fraction);
 
   const line = live ?? flash ?? COPYRIGHT;
+
+  // What the slide-in animation is keyed on, and deliberately not the text.
+  //
+  // The animation plays on mount, so a changed key replays it. During a
+  // download the text changes several times a second ("Stahuji… 41 %", then
+  // 42 %…); keying on it would restart the slide on every tick and the line
+  // would sit parked at its starting offset, half of it clipped by the box -
+  // exactly the state in which nobody can read the percentage. The stage is
+  // what actually changed, so that is what the line is keyed on.
+  const lineKey = live ? `live-${updateStage}` : flash ? `flash-${flash}` : 'rest';
   const failed = updateStage === 'error';
   const tone = live && !ready ? 'busy' : ready ? 'ready' : failed ? 'bad' : flash ? 'flash' : 'quiet';
 
@@ -70,10 +80,10 @@ export function SidebarFooter() {
           Notes_MJ {appVersion || '—'}
         </span>
         {/*
-          The key is the message itself, so each new message slides in rather
-          than the text swapping under a static line.
+          Keyed on the kind of message, so a genuinely new one slides in while
+          a counter ticking inside the same message just updates in place.
         */}
-        <span key={line} className={`sidebar-foot-line tone-${tone}`} title={line}>
+        <span key={lineKey} className={`sidebar-foot-line tone-${tone}`} title={line}>
           {line}
         </span>
       </div>

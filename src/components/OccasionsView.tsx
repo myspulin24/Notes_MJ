@@ -447,11 +447,11 @@ export function OccasionsView({ focusId }: { focusId?: string | null }) {
               value={giftDraft.recipient}
               maxLength={200}
               placeholder="Pro koho"
-              list="t3-recipients"
+              list="notes-mj-recipients"
               onChange={(e) => setGiftDraft({ ...giftDraft, recipient: e.target.value })}
               aria-label="Pro koho"
             />
-            <datalist id="t3-recipients">
+            <datalist id="notes-mj-recipients">
               {[...new Set(open.gifts.map((g) => g.recipient).filter(Boolean))].map((r) => (
                 <option key={r} value={r} />
               ))}
