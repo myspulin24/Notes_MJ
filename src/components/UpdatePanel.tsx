@@ -105,6 +105,14 @@ function Status({
         <p className="update-line ok">Máte nejnovější verzi. Nic není potřeba dělat.</p>
       );
 
+    case 'unpublished':
+      return (
+        <p className="update-line">
+          Pro tuto platformu se zatím nevydávají aktualizace. Novou verzi bude
+          potřeba nainstalovat ručně.
+        </p>
+      );
+
     case 'available':
       return (
         <p className="update-line">

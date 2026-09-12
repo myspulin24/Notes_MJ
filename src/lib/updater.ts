@@ -28,6 +28,7 @@ export type CheckResult =
   | { kind: 'available'; info: UpdateInfo }
   | { kind: 'current' }
   | { kind: 'unsupported' }
+  | { kind: 'unpublished' }
   | { kind: 'error'; error: AppError };
 
 /**
@@ -150,6 +151,31 @@ export async function currentVersion(): Promise<string> {
  * Version comparison is the plugin's job: it parses both sides as semver, so
  * 1.10.0 correctly beats 1.9.0 and a downgrade is never offered.
  */
+/**
+ * Whether the manifest simply has no build for the platform we are running on.
+ *
+ * The updater plugin treats this as an error, but it is not one: the release
+ * page is fine, the connection is fine, this machine is fine - there just is
+ * no artifact for this target yet, which is exactly the situation on macOS
+ * while only Windows installers get published. Telling the user that the
+ * update "failed" would send them looking for a fault that does not exist.
+ *
+ * Matched on the plugin's own wording. Both variants it can raise here -
+ * `TargetNotFound` and `TargetsNotFound` - name the `platforms` object of the
+ * response, and nothing else in that error enum does.
+ */
+export function isPlatformUnpublished(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : typeof (error as { message?: unknown })?.message === 'string'
+          ? ((error as { message: string }).message)
+          : '';
+  return message.includes('`platforms` object');
+}
+
 export async function checkForUpdate(): Promise<CheckResult> {
   if (!isDesktop()) return { kind: 'unsupported' };
 
@@ -173,6 +199,7 @@ export async function checkForUpdate(): Promise<CheckResult> {
     };
   } catch (error) {
     pending = null;
+    if (isPlatformUnpublished(error)) return { kind: 'unpublished' };
     return { kind: 'error', error: toAppError(error) };
   }
 }
@@ -257,7 +284,15 @@ export async function discardUpdate(): Promise<void> {
  * spinner.
  */
 export function updateStatusLine(
-  stage: 'idle' | 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'error',
+  stage:
+    | 'idle'
+    | 'checking'
+    | 'current'
+    | 'unpublished'
+    | 'available'
+    | 'downloading'
+    | 'ready'
+    | 'error',
   version: string | null,
   fraction: number | null,
 ): string | null {

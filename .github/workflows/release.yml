@@ -1,4 +1,4 @@
-# Builds, signs and publishes a Windows release.
+# Builds, signs and publishes a release for Windows and macOS.
 #
 # Triggered by pushing a version tag:
 #
@@ -27,7 +27,29 @@ permissions:
 
 jobs:
   release:
-    runs-on: windows-latest
+    strategy:
+      # One platform failing must not cancel a build that has already started
+      # for the other; a half-finished release is easier to finish than to redo.
+      fail-fast: false
+      # Both jobs publish into the same release, and both rewrite `latest.json`
+      # by merging their platform into whatever is already attached to it. Run
+      # them at the same time and the second upload overwrites the first one's
+      # entry, leaving a release that only one platform can update from. One at
+      # a time costs a few minutes and removes the race entirely.
+      max-parallel: 1
+      matrix:
+        include:
+          - platform: windows-latest
+            args: ''
+          # A universal binary is one artifact that runs on both Apple Silicon
+          # and Intel, so there is a single macOS build to sign and upload.
+          # tauri-action still writes `darwin-aarch64` and `darwin-x86_64`
+          # entries for it, both pointing at that one file, so the updater
+          # matches on the first key it asks for.
+          - platform: macos-latest
+            args: '--target universal-apple-darwin'
+
+    runs-on: ${{ matrix.platform }}
 
     steps:
       - uses: actions/checkout@v4
@@ -40,11 +62,17 @@ jobs:
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          # Building universal means compiling for both architectures, so both
+          # targets have to be installed even though the runner is only one.
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       # Rust builds are slow and almost entirely cacheable.
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          # Without this the two platforms would fight over one cache entry.
+          key: ${{ matrix.platform }}
 
       - run: npm ci
 
@@ -61,7 +89,11 @@ jobs:
           tagName: ${{ github.event.inputs.tag || github.ref_name }}
           releaseName: 'Notes_MJ __VERSION__'
           releaseBody: |
-            Instalace: stáhněte `Notes_MJ___VERSION___x64-setup.exe` a spusťte.
+            **Windows** — stáhněte `Notes_MJ___VERSION___x64-setup.exe` a spusťte.
+
+            **macOS** — stáhněte `Notes_MJ___VERSION___universal.dmg`, otevřete
+            a přetáhněte aplikaci do Aplikací. Balíček není notarizovaný, takže
+            při prvním spuštění je potřeba kliknout pravým tlačítkem → Otevřít.
 
             Kdo už Notes_MJ nainstalované má, nemusí dělat nic — aplikace si
             novou verzi najde sama a nabídne restart.
@@ -70,3 +102,4 @@ jobs:
           # This is what makes automatic updates work: it publishes latest.json
           # alongside the installer, with the signature the app checks.
           includeUpdaterJson: true
+          args: ${{ matrix.args }}

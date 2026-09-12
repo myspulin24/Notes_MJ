@@ -208,6 +208,7 @@ export type UpdateStage =
   | 'idle'
   | 'checking'
   | 'current'
+  | 'unpublished'
   | 'available'
   | 'downloading'
   | 'ready'
@@ -744,6 +745,14 @@ export const useStore = create<State>((set, get) => ({
     if (result.kind === 'unsupported') {
       // A browser tab, where there is nothing to update.
       set({ updateStage: 'idle', updateCheckedAt: checkedAt });
+      return;
+    }
+
+    if (result.kind === 'unpublished') {
+      // The check worked; this platform just has no build on the release page
+      // yet. Worth a word - the user did press the button - but not a failure,
+      // so no error tone and nothing to notify about.
+      set({ updateStage: 'unpublished', updateInfo: null, updateCheckedAt: checkedAt });
       return;
     }
 

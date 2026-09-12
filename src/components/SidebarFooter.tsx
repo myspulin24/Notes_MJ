@@ -41,9 +41,11 @@ export function SidebarFooter() {
     const message =
       updateStage === 'current'
         ? 'Máte nejnovější verzi'
-        : updateStage === 'error'
-          ? (updateError?.message ?? 'Aktualizaci se nepodařilo dokončit')
-          : null;
+        : updateStage === 'unpublished'
+          ? 'Pro tuto platformu zatím nejsou aktualizace'
+          : updateStage === 'error'
+            ? (updateError?.message ?? 'Aktualizaci se nepodařilo dokončit')
+            : null;
     if (!message) return;
 
     setFlash(message);
