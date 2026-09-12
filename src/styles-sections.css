@@ -238,10 +238,21 @@ html[data-motion='reduced'] .section-tab-icon {
 
 .sidebar-foot-line {
   font-size: 11px;
+  line-height: 1.35;
   color: var(--text-faint);
-  white-space: nowrap;
+  /*
+    The message wraps instead of being cut off - these lines exist to be read,
+    and "Pro tuto platformu zatím nejsou ..." tells the user nothing. A failure
+    message comes from the plugin and can be arbitrarily long, though, so it
+    still has to stop somewhere: three lines, and the tooltip keeps the rest.
+  */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
-  text-overflow: ellipsis;
   animation: foot-line-in 0.32s cubic-bezier(0.22, 0.9, 0.25, 1) both;
 }
 

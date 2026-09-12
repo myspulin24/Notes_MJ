@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyDownloadEvent,
   describeUpdate,
+  isPlatformUnpublished,
   shortDate,
   updateStatusLine,
   NO_PROGRESS,
@@ -157,5 +158,50 @@ describe('updateStatusLine', () => {
     // The plugin has always given us one, but a blank line would look broken.
     expect(updateStatusLine('ready', null, null)).toBe('Nová verze čeká na restart');
     expect(updateStatusLine('available', '', null)).toBe('Nová verze je k dispozici');
+  });
+});
+
+describe('isPlatformUnpublished', () => {
+  // Both wordings are copied from tauri-plugin-updater's own error enum
+  // (`TargetNotFound` and `TargetsNotFound`). If a plugin upgrade reworded
+  // them, this is the test that should go red rather than a user seeing a
+  // red "update failed" line on a platform that simply has no build.
+  it('recognises a single missing target', () => {
+    const error = new Error(
+      'the platform `darwin-aarch64` was not found in the response `platforms` object',
+    );
+    expect(isPlatformUnpublished(error)).toBe(true);
+  });
+
+  it('recognises the fallback-list variant, which is what macOS actually hits', () => {
+    const error = new Error(
+      'None of the fallback platforms `["darwin-aarch64", "darwin-universal"]` ' +
+        'were found in the response `platforms` object',
+    );
+    expect(isPlatformUnpublished(error)).toBe(true);
+  });
+
+  it('reads a bare string and a plain object with a message', () => {
+    expect(
+      isPlatformUnpublished('the platform `x` was not found in the response `platforms` object'),
+    ).toBe(true);
+    expect(
+      isPlatformUnpublished({
+        message: 'the platform `x` was not found in the response `platforms` object',
+      }),
+    ).toBe(true);
+  });
+
+  it('leaves real failures alone, so they still surface as errors', () => {
+    expect(isPlatformUnpublished(new Error('error sending request for url'))).toBe(false);
+    expect(isPlatformUnpublished(new Error('signature verification failed'))).toBe(false);
+    expect(isPlatformUnpublished(new Error('could not fetch a valid release JSON'))).toBe(false);
+  });
+
+  it('does not fall over on things that are not errors at all', () => {
+    expect(isPlatformUnpublished(undefined)).toBe(false);
+    expect(isPlatformUnpublished(null)).toBe(false);
+    expect(isPlatformUnpublished({})).toBe(false);
+    expect(isPlatformUnpublished(42)).toBe(false);
   });
 });
