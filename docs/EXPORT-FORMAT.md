@@ -1,6 +1,6 @@
 # Notes_MJ export format
 
-Version **2** · media type `application/json` · UTF-8, no BOM.
+Version **2.1** · media type `application/json` · UTF-8, no BOM.
 
 This is the format written by **Settings → Export** and by the `export_json`
 command, and the only format `import_json` accepts. It is intended to be
