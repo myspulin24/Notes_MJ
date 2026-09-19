@@ -2,7 +2,7 @@
 
 Osobní plánovač v duchu Things 3: úkoly, kalendář, interaktivní přehled,
 zápisník a plánovač dárků na Vánoce či narozeniny. Desktopová aplikace pro
-Windows 11 a macOS 11+, kompletně v češtině. Data zůstávají v počítači.
+Windows a macOS 11+, kompletně v češtině. Data zůstávají v počítači.
 
 **Autor:** Michal Jašek · **© 2026**
 
